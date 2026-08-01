@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a0e13">
+<title>fog/california — live statewide fog loop</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌫️</text></svg>">
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --bg:#0a0e13;            /* marine night */
+  --ink:#e9edf1;           /* fog white */
+  --dim:#8b98a5;           /* overcast gray */
+  --line:rgba(233,237,241,.14);
+  --accent:#e8542f;        /* Golden Gate international orange */
+  --glass:rgba(10,14,19,.58);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--sans);
+  overflow:hidden;overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+
+/* ---------- stage ---------- */
+#stage{position:fixed;inset:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+
+/* ---------- header ---------- */
+header{
+  position:absolute;top:0;left:0;right:0;z-index:5;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 24px 14px;
+  background:linear-gradient(rgba(10,14,19,.72),rgba(10,14,19,0));
+  pointer-events:none;transition:opacity .45s ease;
+}
+header .brand,#status{pointer-events:auto}
+.brand{font-family:var(--mono);font-size:14px;letter-spacing:.08em}
+.brand .slash{color:var(--accent);font-weight:700}
+.brand small{display:block;font-family:var(--sans);color:var(--dim);font-size:10.5px;letter-spacing:.04em;margin-top:3px}
+#status{text-align:right}
+#liveChip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:var(--dim);
+  border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin-bottom:6px;
+  background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+#liveChip .dot{width:6px;height:6px;border-radius:50%;background:var(--dim)}
+#liveChip.on{color:var(--ink)}
+#liveChip.on .dot{background:var(--accent);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+#frameTime{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:.01em}
+#frameSub{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:3px;letter-spacing:.03em}
+
+/* ---------- dock ---------- */
+#dock{
+  position:absolute;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:5;
+  background:var(--glass);backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);
+  border:1px solid var(--line);border-radius:16px;padding:10px 12px 9px;
+  transition:opacity .45s ease;max-width:860px;margin:0 auto;
+}
+.row{display:flex;align-items:center;gap:10px}
+.row+.row{margin-top:9px;flex-wrap:wrap;row-gap:7px}
+#playBtn{
+  width:38px;height:38px;flex:0 0 38px;border-radius:50%;
+  border:1px solid var(--line);display:grid;place-items:center;background:rgba(233,237,241,.06);
+}
+#playBtn svg{width:15px;height:15px;fill:var(--ink)}
+#playBtn:active{transform:scale(.94)}
+
+/* time ruler — the scrubber is a clock */
+#ruler{position:relative;flex:1;height:44px;cursor:pointer;touch-action:none}
+#ruler .track{position:absolute;left:0;right:0;top:19px;height:5px;border-radius:3px;background:rgba(233,237,241,.14)}
+#ruler .fill{position:absolute;left:0;top:19px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgba(232,84,47,.45),var(--accent));width:0}
+#ruler .thumb{
+  position:absolute;top:21.5px;width:15px;height:15px;border-radius:50%;
+  background:var(--accent);border:2.5px solid #0a0e13;box-shadow:0 0 0 1px rgba(232,84,47,.55),0 2px 8px rgba(0,0,0,.5);
+  transform:translate(-50%,-50%);will-change:left;
+}
+#ruler .tick{position:absolute;top:26px;width:1px;height:5px;background:rgba(233,237,241,.28);transform:translateX(-.5px)}
+#ruler .tick.major{height:8px;background:rgba(233,237,241,.45)}
+#ruler .lab{
+  position:absolute;top:34px;transform:translateX(-50%);
+  font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.02em;white-space:nowrap;
+}
+
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--dim);
+  padding:6px 10px;border-radius:0;
+}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{color:#0a0e13;background:var(--ink);font-weight:600}
+.icon-btn{
+  width:32px;height:32px;border:1px solid var(--line);border-radius:9px;
+  display:grid;place-items:center;color:var(--dim);
+}
+.icon-btn svg{width:15px;height:15px;fill:currentColor}
+.spacer{flex:1}
+.dock-label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.14em;margin-right:-4px}
+
+/* chrome auto-hide while playing */
+body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none}
+
+/* ---------- floating bits ---------- */
+#resetView{
+  position:absolute;top:calc(74px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:5;
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink);
+  background:var(--glass);border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;transition:opacity .45s ease;
+}
+#toast{
+  position:absolute;bottom:120px;left:50%;transform:translateX(-50%);z-index:8;
+  font-family:var(--mono);font-size:11.5px;background:rgba(20,26,33,.92);border:1px solid var(--line);
+  border-radius:10px;padding:9px 14px;opacity:0;pointer-events:none;transition:opacity .3s;max-width:86vw;text-align:center;
+}
+#toast.show{opacity:1}
+
+/* ---------- loader / error ---------- */
+#veil{position:absolute;inset:0;z-index:10;background:var(--bg);display:grid;place-items:center;overflow:hidden;transition:opacity .7s ease,background-color .8s ease}
+#veil.peek{background:rgba(10,14,19,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+#veil.gone{opacity:0;pointer-events:none}
+.fogblob{position:absolute;width:130vmax;height:130vmax;border-radius:50%;filter:blur(2px);pointer-events:none}
+.fogblob.a{background:radial-gradient(circle at 35% 45%,rgba(139,152,165,.16),transparent 55%);animation:drift 26s ease-in-out infinite alternate}
+.fogblob.b{background:radial-gradient(circle at 65% 55%,rgba(233,237,241,.09),transparent 50%);animation:drift 34s ease-in-out infinite alternate-reverse}
+@keyframes drift{from{transform:translate(-12%,-6%)}to{transform:translate(10%,5%)}}
+@media (prefers-reduced-motion:reduce){.fogblob{animation:none}#liveChip.on .dot{animation:none}}
+#veil .inner{position:relative;text-align:center;padding:0 24px}
+#veil .brand{font-size:19px}
+#veil .brand small{font-size:11px;margin-top:6px}
+#loadMsg{font-family:var(--mono);font-size:11.5px;color:var(--dim);margin-top:26px;letter-spacing:.05em}
+#bar{width:min(260px,70vw);height:2px;background:rgba(233,237,241,.14);border-radius:1px;margin:12px auto 0;overflow:hidden}
+#bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .25s}
+#errBox{display:none;margin-top:22px}
+#errBox p{font-size:13px;color:var(--dim);max-width:34ch;margin:0 auto 16px;line-height:1.5}
+#retryBtn{font-family:var(--mono);font-size:12px;letter-spacing:.08em;border:1px solid var(--accent);color:var(--accent);border-radius:999px;padding:9px 22px}
+
+/* ---------- info sheet ---------- */
+#info{
+  position:absolute;inset:0;z-index:20;display:none;place-items:end center;
+  background:rgba(5,8,11,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+}
+#info.open{display:grid}
+#infoCard{
+  width:100%;max-width:560px;max-height:78vh;overflow-y:auto;
+  background:#10161d;border:1px solid var(--line);border-radius:18px 18px 0 0;
+  padding:22px 22px calc(24px + env(safe-area-inset-bottom));
+}
+#infoCard h2{font-family:var(--mono);font-size:14px;letter-spacing:.06em;margin-bottom:14px}
+#infoCard h2 .slash{color:var(--accent)}
+#infoCard p{font-size:13px;line-height:1.6;color:var(--dim);margin-bottom:12px}
+#infoCard p b{color:var(--ink);font-weight:600}
+#infoCard a{color:var(--ink)}
+#infoCard .keys{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9}
+#infoClose{position:sticky;float:right;top:0;font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+@media (max-width:560px){
+  .brand small{display:none}
+  #frameTime{font-size:15px}
+  #dock{left:8px;right:8px}
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <header id="hdr">
+    <div class="brand">fog<span class="slash">/</span>california
+      <small>marine layer &amp; tule fog · the whole state, live</small>
+    </div>
+    <div id="status">
+      <div id="liveChip"><span class="dot"></span><span id="liveTxt">CONNECTING</span></div>
+      <div id="frameTime">—</div>
+      <div id="frameSub">GOES-18 West · GeoColor</div>
+    </div>
+  </header>
+
+  <button id="resetView">⤾&nbsp; reset view</button>
+
+  <div id="dock">
+    <div class="row">
+      <button id="playBtn" aria-label="Pause">
+        <svg id="icPause" viewBox="0 0 16 16"><path d="M3 1.5h3.4v13H3zM9.6 1.5H13v13H9.6z"/></svg>
+        <svg id="icPlay" viewBox="0 0 16 16" style="display:none"><path d="M4 1.6l10 6.4-10 6.4z"/></svg>
+      </button>
+      <div id="ruler" aria-label="Timeline">
+        <div class="track"></div><div class="fill"></div>
+        <div id="ticks"></div>
+        <div class="thumb"></div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="dock-label">SPAN</span>
+      <div class="seg" id="segHours">
+        <button data-h="2">2h</button><button data-h="4" aria-pressed="true">4h</button><button data-h="8">8h</button>
+      </div>
+      <span class="dock-label">SPEED</span>
+      <div class="seg" id="segSpeed">
+        <button data-s="0.5">½×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="2">2×</button>
+      </div>
+      <span class="dock-label">VIEW</span>
+      <div class="seg" id="segMode">
+        <button data-m="geo" aria-pressed="true">GeoColor</button><button data-m="ir">IR 3.9µm</button>
+      </div>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="fsBtn" aria-label="Fullscreen"><svg viewBox="0 0 16 16"><path d="M1 6V1h5v2H3v3H1zm14 0h-2V3h-3V1h5v5zM1 10h2v3h3v2H1v-5zm12 3v-3h2v5h-5v-2h3z"/></svg></button>
+      <button class="icon-btn" id="infoBtn" aria-label="About"><svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1.1 1.1 0 110 2.2A1.1 1.1 0 018 4zm1.2 8H6.8v-1.2h.6V8.4h-.6V7.2h1.8v3.6h.6V12z"/></svg></button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="veil">
+    <div class="fogblob a"></div><div class="fogblob b"></div>
+    <div class="inner">
+      <div class="brand">fog<span class="slash">/</span>california<small>marine layer &amp; tule fog · the whole state, live</small></div>
+      <div id="loadMsg">contacting GOES-West…</div>
+      <div id="bar"><i></i></div>
+      <div id="errBox">
+        <p id="errTxt"></p>
+        <button id="retryBtn">RETRY</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="info">
+    <div id="infoCard">
+      <button id="infoClose">close</button>
+      <h2>fog<span class="slash">/</span>california</h2>
+      <p>A live loop of <b>fog and low cloud over the entire state</b> — coastal marine layer, Central Valley tule fog, and everything between — seen from 22,000 miles up by NOAA's <b>GOES-18 (GOES-West)</b> satellite, Pacific Southwest sector. New frames arrive about every 5 minutes; this page refreshes itself automatically.</p>
+      <p><b>GeoColor</b> shows natural color by day and blends in infrared at night, so low fog stays visible around the clock. <b>IR 3.9&nbsp;µm</b> is the shortwave-infrared band forecasters use to pick out fog and stratus in the dark.</p>
+      <p class="keys">
+        pinch / scroll &nbsp;·&nbsp; zoom<br>
+        drag &nbsp;·&nbsp; pan (when zoomed)<br>
+        double-tap &nbsp;·&nbsp; zoom in / out<br>
+        tap image &nbsp;·&nbsp; hide or show controls<br>
+        space &nbsp;·&nbsp; play / pause &nbsp;&nbsp; ← → &nbsp;·&nbsp; step frames
+      </p>
+      <p>Imagery: NOAA / NESDIS / <a href="https://www.star.nesdis.noaa.gov/goes/" target="_blank" rel="noopener">STAR</a>; GeoColor by CIRA &amp; NOAA. Informational only — not for operational or safety-of-life use. A statewide homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+   fog/california — GOES-18 Pacific Southwest sector viewer
+   Data: https://cdn.star.nesdis.noaa.gov/GOES18/ABI/SECTOR/psw/
+   ========================================================= */
+const CDN    = 'https://cdn.star.nesdis.noaa.gov';
+const SAT    = 'GOES18';                 // GOES-West
+const SECTOR = 'psw';                    // Pacific Southwest = all of California
+const SIZE_PREF = [1200, 600, 2400, 300];
+const MAXF   = 40;                       // frame budget (memory)
+const HOLD_MS = 1150;                    // pause on the latest frame each loop
+const FPS = {0.5: 4.5, 1: 9, 2: 16};
+const REFRESH_MS = 5 * 60 * 1000;
+const MODES = {
+  geo: {dir: 'GEOCOLOR', token: 'GEOCOLOR', label: 'GeoColor'},
+  ir:  {dir: '07',       token: '07',       label: 'IR 3.9 µm'}
+};
+
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- state ---------- */
+let mode = 'geo', hours = 4, speed = 1;
+let frames = [];               // [{t, url, img}]
+let idx = 0;
+let playing = !reduceMotion;
+let zoom = 1, panX = 0, panY = 0;
+let holdUntil = 0, acc = 0, lastTick = performance.now();
+let loadRun = 0;               // cancels stale loads
+let zenTimer = null, refreshTimer = null;
+
+/* ---------- time helpers ---------- */
+const PT = 'America/Los_Angeles';
+const fmtTime = new Intl.DateTimeFormat('en-US', {timeZone: PT, hour: 'numeric', minute: '2-digit', timeZoneName: 'short'});
+const fmtDate = new Intl.DateTimeFormat('en-US', {timeZone: PT, weekday: 'short', month: 'short', day: 'numeric'});
+const fmtHM   = new Intl.DateTimeFormat('en-US', {timeZone: PT, hour: 'numeric', minute: '2-digit'});
+function ptHM(t){ // {h, m} in Pacific Time
+  const p = fmtHM.formatToParts(t), o = {};
+  for (const x of p) o[x.type] = x.value;
+  let h = +o.hour % 12; if (o.dayPeriod === 'PM') h += 12;
+  return {h, m: +o.minute};
+}
+function tsToMs(s){ // 'YYYYDDDHHMM' (UTC) -> ms
+  const y = +s.slice(0,4), d = +s.slice(4,7), hh = +s.slice(7,9), mm = +s.slice(9,11);
+  return Date.UTC(y, 0, 1) + ((d - 1) * 24 + hh) * 3600000 + mm * 60000;
+}
+function msToTs(t){ // ms -> 'YYYYDDDHHMM'
+  const d = new Date(t);
+  const doy = Math.floor((t - Date.UTC(d.getUTCFullYear(), 0, 1)) / 86400000) + 1;
+  const p = (n, w) => String(n).padStart(w, '0');
+  return '' + d.getUTCFullYear() + p(doy,3) + p(d.getUTCHours(),2) + p(d.getUTCMinutes(),2);
+}
+
+/* ---------- frame discovery ---------- */
+function baseUrl(){ return `${CDN}/${SAT}/ABI/SECTOR/${SECTOR}/${MODES[mode].dir}/`; }
+
+async function listFrames(){
+  // Preferred: read the CDN directory listing (CORS is open on cdn.star).
+  const res = await fetch(baseUrl(), {cache: 'no-store'});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const html = await res.text();
+  const re = new RegExp(`href="((\\d{11})_${SAT}-ABI-${SECTOR}-${MODES[mode].token}-(\\d+)x\\d+\\.jpg)"`, 'g');
+  const byTs = new Map(); const sizes = new Set();
+  let m;
+  while ((m = re.exec(html))) {
+    const [, file, ts, size] = m;
+    sizes.add(+size);
+    if (!byTs.has(ts)) byTs.set(ts, {});
+    byTs.get(ts)[+size] = file;
+  }
+  if (!byTs.size) throw new Error('empty listing');
+  const size = SIZE_PREF.find(s => sizes.has(s)) || [...sizes].sort((a,b)=>b-a)[0];
+  return [...byTs.entries()]
+    .filter(([, f]) => f[size])
+    .map(([ts, f]) => ({t: tsToMs(ts), url: baseUrl() + f[size]}))
+    .sort((a, b) => a.t - b.t);
+}
+
+function synthFrames(minuteMod){
+  // Fallback if the listing can't be fetched: guess the 5-minute scan grid
+  // (psw scans land on minutes ending in 1 and 6) and let bad guesses 404.
+  const size = 1200, out = [];
+  let t = Date.now() - 2 * 60000;
+  t -= t % 60000;
+  while ((Math.floor(t / 60000) % 5) !== minuteMod) t -= 60000;
+  const n = hours * 12 + 4;
+  for (let i = 0; i < n; i++, t -= 5 * 60000)
+    out.push({t, url: `${baseUrl()}${msToTs(t)}_${SAT}-ABI-${SECTOR}-${MODES[mode].token}-${size}x${size}.jpg`});
+  return out.reverse();
+}
+
+function windowed(all){
+  if (!all.length) return [];
+  const latest = all[all.length - 1].t;
+  const win = all.filter(f => f.t >= latest - hours * 3600000);
+  const step = Math.max(1, Math.ceil(win.length / MAXF));
+  const picked = [];
+  for (let i = win.length - 1; i >= 0; i -= step) picked.push(win[i]);
+  return picked.reverse();
+}
+
+function loadImg(f){
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.decoding = 'async';
+    im.onload = () => { f.img = im; res(f); };
+    im.onerror = () => rej(f);
+    im.src = f.url;
+  });
+}
+async function preload(list, onProg){
+  let done = 0; const q = [...list];
+  const worker = async () => {
+    while (q.length) {
+      const f = q.shift();
+      try { await loadImg(f); } catch (e) { f.failed = true; }
+      onProg(++done, list.length);
+    }
+  };
+  await Promise.all(Array.from({length: 5}, worker));
+  return list.filter(f => !f.failed);
+}
+
+/* ---------- boot / reload ---------- */
+async function reload(fullVeil){
+  const run = ++loadRun;
+  if (fullVeil) showVeil('contacting GOES-West…');
+  try {
+    // instant first paint: the CDN keeps a rolling "latest" jpg
+    if (fullVeil && !frames.length)
+      loadImg({url: baseUrl() + '1200x1200.jpg', t: Date.now()})
+        .then(f => { if (run === loadRun && frames.length <= 1) { frames = [f]; idx = 0; draw(); $('veil').classList.add('peek'); } })
+        .catch(() => {});
+
+    let usedSynth = false, list;
+    try { list = windowed(await listFrames()); }
+    catch (e) {
+      usedSynth = true;
+      setMsg('listing unavailable — probing scan grid…');
+      list = windowed(synthFrames(1));
+    }
+    if (run !== loadRun) return;
+    setMsg('pulling frames…');
+    let ok = await preload(list, (d, n) => run === loadRun && setProg(d, n));
+    if (run !== loadRun) return;
+    if (ok.length < 3 && usedSynth) { // scan grid may sit on :0/:5 minutes instead
+      ok = await preload(windowed(synthFrames(0)), (d, n) => run === loadRun && setProg(d, n));
+      if (run !== loadRun) return;
+    }
+    if (ok.length < 2) throw new Error('no frames');
+    frames = ok; idx = frames.length - 1;
+    buildRuler(); syncHUD(); draw();
+    hideVeil();
+    holdUntil = performance.now() + 600;
+  } catch (e) {
+    if (run !== loadRun) return;
+    if (frames.length > 1) { hideVeil(); toast('couldn\u2019t refresh — kept the current loop'); }
+    else showError("NOAA's satellite feed didn't respond. It may be a brief CDN or network hiccup — this view needs internet access to cdn.star.nesdis.noaa.gov.");
+  }
+}
+
+async function quietRefresh(){
+  if (document.hidden) return;
+  try {
+    const all = await listFrames();
+    if (!all.length || !frames.length) return;
+    const newest = frames[frames.length - 1].t;
+    const fresh = all.filter(f => f.t > newest);
+    if (!fresh.length) return;
+    const ok = await preload(fresh, () => {});
+    if (!ok.length) return;
+    const wasLast = idx === frames.length - 1;
+    frames = frames.concat(ok);
+    const cutoff = frames[frames.length - 1].t - hours * 3600000;
+    while (frames.length > MAXF + 6 || (frames.length && frames[0].t < cutoff)) { frames.shift(); idx = Math.max(0, idx - 1); }
+    if (wasLast) idx = frames.length - 1;
+    buildRuler(); syncHUD();
+  } catch (e) { /* try again next cycle */ }
+}
+
+/* ---------- canvas ---------- */
+function resize(){
+  const dpr = Math.min(devicePixelRatio || 1, 3);
+  const w = innerWidth, h = innerHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  clampPan(); draw(); buildRuler();
+}
+function view(){ // current draw transform
+  const img = frames[idx] && frames[idx].img;
+  if (!img) return null;
+  const W = innerWidth, H = innerHeight;
+  const s0 = Math.min(W / img.naturalWidth, H / img.naturalHeight);
+  const s = s0 * zoom;
+  const tx = (W - img.naturalWidth * s) / 2 + panX;
+  const ty = (H - img.naturalHeight * s) / 2 + panY;
+  return {img, W, H, s, s0, tx, ty};
+}
+function clampPan(){
+  const v = view(); if (!v) return;
+  const mx = Math.max(0, (v.img.naturalWidth * v.s - v.W) / 2);
+  const my = Math.max(0, (v.img.naturalHeight * v.s - v.H) / 2);
+  panX = Math.min(mx, Math.max(-mx, panX));
+  panY = Math.min(my, Math.max(-my, panY));
+}
+function draw(){
+  const v = view();
+  ctx.fillStyle = '#0a0e13';
+  ctx.fillRect(0, 0, innerWidth, innerHeight);
+  if (!v) return;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(v.img, v.tx, v.ty, v.img.naturalWidth * v.s, v.img.naturalHeight * v.s);
+}
+function zoomAt(px, py, target){
+  const v = view(); if (!v) return;
+  const z2 = Math.min(14, Math.max(1, target));
+  const ix = (px - v.tx) / v.s, iy = (py - v.ty) / v.s;
+  const s2 = v.s0 * z2;
+  zoom = z2;
+  panX = px - ix * s2 - (v.W - v.img.naturalWidth * s2) / 2;
+  panY = py - iy * s2 - (v.H - v.img.naturalHeight * s2) / 2;
+  clampPan(); draw(); syncZoomUI();
+}
+function resetView(){ zoom = 1; panX = panY = 0; draw(); syncZoomUI(); }
+function syncZoomUI(){ $('resetView').style.display = zoom > 1.02 ? 'block' : 'none'; }
+
+/* ---------- playback ---------- */
+function fps(){ return FPS[speed]; }
+function tick(now){
+  const dt = Math.min(now - lastTick, 100); lastTick = now;
+  if (playing && frames.length > 1 && now >= holdUntil) {
+    acc += dt;
+    const interval = 1000 / fps();
+    if (acc >= interval) {
+      acc = 0;
+      if (idx >= frames.length - 1) idx = 0;
+      else { idx++; if (idx === frames.length - 1) holdUntil = now + HOLD_MS; }
+      draw(); syncHUD();
+    }
+  }
+  requestAnimationFrame(tick);
+}
+function setPlaying(p){
+  playing = p;
+  $('icPlay').style.display = p ? 'none' : 'block';
+  $('icPause').style.display = p ? 'block' : 'none';
+  $('playBtn').setAttribute('aria-label', p ? 'Pause' : 'Play');
+  wake();
+}
+
+/* ---------- HUD ---------- */
+function syncHUD(){
+  const f = frames[idx]; if (!f) return;
+  $('frameTime').textContent = fmtTime.format(f.t);
+  $('frameSub').textContent = `${fmtDate.format(f.t)} · GOES-18 West · ${MODES[mode].label}`;
+  const last = frames[frames.length - 1];
+  const ageMin = Math.max(0, Math.round((Date.now() - last.t) / 60000));
+  const chip = $('liveChip'), live = ageMin <= 16;
+  chip.classList.toggle('on', live);
+  $('liveTxt').textContent = live ? `LIVE · ${ageMin}m ago` : `DELAYED · ${ageMin}m`;
+  // ruler thumb + fill
+  const t0 = frames[0].t, t1 = last.t, span = Math.max(1, t1 - t0);
+  const x = ((f.t - t0) / span * 100).toFixed(3) + '%';
+  rThumb.style.left = x; rFill.style.width = x;
+}
+setInterval(() => frames.length && syncHUD(), 30000);
+
+/* ---------- time ruler ---------- */
+const ruler = $('ruler'), rThumb = ruler.querySelector('.thumb'), rFill = ruler.querySelector('.fill'), rTicks = $('ticks');
+function buildRuler(){
+  rTicks.innerHTML = '';
+  if (frames.length < 2) return;
+  const t0 = frames[0].t, t1 = frames[frames.length - 1].t, span = t1 - t0;
+  const w = ruler.clientWidth || 300;
+  const labEveryMin = span <= 2.3 * 3600000 ? 30 : span <= 4.6 * 3600000 ? 60 : 120;
+  // first 30-min boundary in Pacific Time at/after t0
+  const {m} = ptHM(t0);
+  let t = t0 + (((30 - (m % 30)) % 30) * 60000 - (t0 % 60000));
+  if (t < t0) t += 30 * 60000;
+  for (; t <= t1; t += 30 * 60000) {
+    const {h, m: mm} = ptHM(t);
+    const pct = ((t - t0) / span * 100);
+    const major = mm === 0 ? (labEveryMin < 120 || h % 2 === 0) : (labEveryMin === 30 && mm === 30);
+    const tick = document.createElement('i');
+    tick.className = 'tick' + (major ? ' major' : '');
+    tick.style.left = pct + '%';
+    rTicks.appendChild(tick);
+    if (major && pct > 4 && pct < 96 && w / (span / (labEveryMin * 60000)) > 46) {
+      const lab = document.createElement('span');
+      lab.className = 'lab';
+      lab.style.left = pct + '%';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      lab.textContent = mm ? `${h12}:${String(mm).padStart(2,'0')}` : `${h12} ${h < 12 ? 'AM' : 'PM'}`;
+      rTicks.appendChild(lab);
+    }
+  }
+}
+let scrubResume = false;
+function seekFromEvent(e){
+  if (frames.length < 2) return;
+  const r = ruler.getBoundingClientRect();
+  const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  const t = frames[0].t + frac * (frames[frames.length - 1].t - frames[0].t);
+  let best = 0, bd = Infinity;
+  frames.forEach((f, i) => { const d = Math.abs(f.t - t); if (d < bd) { bd = d; best = i; } });
+  idx = best; draw(); syncHUD();
+}
+ruler.addEventListener('pointerdown', e => {
+  ruler.setPointerCapture(e.pointerId);
+  scrubResume = playing; setPlaying(false); seekFromEvent(e);
+});
+ruler.addEventListener('pointermove', e => { if (ruler.hasPointerCapture(e.pointerId)) seekFromEvent(e); });
+ruler.addEventListener('pointerup', e => { if (scrubResume) { holdUntil = performance.now() + 700; setPlaying(true); } });
+
+/* ---------- gestures on the map ---------- */
+const pts = new Map();
+let pinch = null, lastTap = {t: 0, x: 0, y: 0}, moved = false;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, {x: e.clientX, y: e.clientY});
+  moved = false;
+  if (pts.size === 2) {
+    const [a, b] = [...pts.values()];
+    pinch = {d: Math.hypot(a.x - b.x, a.y - b.y), zoom, mid: {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2}};
+  }
+  wake();
+});
+cv.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId)) return;
+  const p = pts.get(e.pointerId);
+  const dx = e.clientX - p.x, dy = e.clientY - p.y;
+  if (Math.hypot(dx, dy) > 8) moved = true;
+  p.x = e.clientX; p.y = e.clientY;
+  if (pts.size === 2 && pinch) {
+    const [a, b] = [...pts.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    const mid = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2};
+    zoomAt(mid.x, mid.y, pinch.zoom * (d / pinch.d));
+    panX += mid.x - pinch.mid.x; panY += mid.y - pinch.mid.y;
+    pinch.mid = mid; clampPan(); draw();
+  } else if (pts.size === 1 && zoom > 1.02) {
+    panX += dx; panY += dy; clampPan(); draw();
+  }
+});
+function endPointer(e){
+  pts.delete(e.pointerId);
+  if (pts.size < 2) pinch = null;
+  if (e.type === 'pointerup' && !moved && pts.size === 0) {
+    const now = performance.now();
+    if (now - lastTap.t < 300 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) {
+      lastTap.t = 0;
+      zoom > 1.5 ? resetView() : zoomAt(e.clientX, e.clientY, 3.2);
+    } else {
+      lastTap = {t: now, x: e.clientX, y: e.clientY};
+      setTimeout(() => { if (lastTap.t && performance.now() - lastTap.t >= 350) { toggleZen(); lastTap.t = 0; } }, 360);
+    }
+  }
+}
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, zoom * Math.exp(-e.deltaY * 0.0016));
+}, {passive: false});
+
+/* ---------- chrome auto-hide ---------- */
+function wake(){
+  document.body.classList.remove('zen');
+  clearTimeout(zenTimer);
+  zenTimer = setTimeout(() => { if (playing && !$('info').classList.contains('open')) document.body.classList.add('zen'); }, 4500);
+}
+function toggleZen(){
+  if (document.body.classList.contains('zen')) wake();
+  else { clearTimeout(zenTimer); document.body.classList.add('zen'); }
+}
+['pointermove', 'pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, e => {
+  if (ev === 'pointerdown' && e.target === cv) return; // canvas taps toggle chrome themselves
+  wake();
+}));
+
+/* ---------- controls ---------- */
+$('playBtn').onclick = () => setPlaying(!playing);
+$('resetView').onclick = resetView;
+function segWire(el, attr, fn){
+  el.querySelectorAll('button').forEach(b => b.onclick = () => {
+    el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    fn(b.dataset[attr]); wake();
+  });
+}
+segWire($('segHours'), 'h', v => { hours = +v; reload(false); toast(`showing last ${v} hours`); });
+segWire($('segSpeed'), 's', v => { speed = +v; });
+segWire($('segMode'), 'm', v => {
+  const prev = mode; mode = v;
+  reloadMode(prev);
+});
+async function reloadMode(prev){
+  toast(`loading ${MODES[mode].label}…`);
+  const keep = frames, keepIdx = idx, run = ++loadRun;
+  try {
+    const list = windowed(await listFrames());
+    const ok = await preload(list, () => {});
+    if (run !== loadRun) return;
+    if (ok.length < 2) throw new Error('empty');
+    frames = ok; idx = frames.length - 1;
+    buildRuler(); syncHUD(); draw();
+  } catch (e) {
+    if (run !== loadRun) return;
+    mode = prev; frames = keep; idx = keepIdx;
+    $('segMode').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.m === mode));
+    syncHUD(); toast('that view isn\u2019t available right now');
+  }
+}
+$('fsBtn').onclick = () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  } catch (e) { toast('fullscreen isn\u2019t available here'); }
+};
+if (!document.documentElement.requestFullscreen) $('fsBtn').style.display = 'none';
+$('infoBtn').onclick = () => { $('info').classList.add('open'); wake(); };
+$('infoClose').onclick = () => $('info').classList.remove('open');
+$('info').addEventListener('pointerdown', e => { if (e.target === $('info')) $('info').classList.remove('open'); });
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); setPlaying(!playing); }
+  else if (e.key === 'ArrowRight' && frames.length) { setPlaying(false); idx = (idx + 1) % frames.length; draw(); syncHUD(); }
+  else if (e.key === 'ArrowLeft' && frames.length) { setPlaying(false); idx = (idx - 1 + frames.length) % frames.length; draw(); syncHUD(); }
+  else if (e.key === '+' || e.key === '=') zoomAt(innerWidth / 2, innerHeight / 2, zoom * 1.3);
+  else if (e.key === '-') zoomAt(innerWidth / 2, innerHeight / 2, zoom / 1.3);
+  else if (e.key === '0' || e.key.toLowerCase() === 'r') resetView();
+  else if (e.key.toLowerCase() === 'f') $('fsBtn').click();
+});
+
+/* ---------- veil / toast ---------- */
+function showVeil(msg){ const v = $('veil'); v.classList.remove('gone'); v.classList.remove('peek'); $('errBox').style.display = 'none'; $('bar').style.display = 'block'; setMsg(msg); setProg(0, 1); }
+function hideVeil(){ const v = $('veil'); v.classList.add('gone'); v.classList.remove('peek'); }
+function setMsg(m){ $('loadMsg').textContent = m; }
+function setProg(d, n){ $('bar').firstElementChild.style.width = (d / n * 100) + '%'; if (n > 1) setMsg(`pulling frames from GOES-West · ${d} / ${n}`); }
+function showError(msg){
+  $('veil').classList.remove('gone');
+  $('bar').style.display = 'none'; setMsg('');
+  $('errTxt').textContent = msg;
+  $('errBox').style.display = 'block';
+}
+$('retryBtn').onclick = () => reload(true);
+let toastTimer;
+function toast(m){
+  const t = $('toast'); t.textContent = m; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------- go ---------- */
+addEventListener('resize', resize);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastTick = performance.now(); quietRefresh(); } });
+resize();
+setPlaying(playing);
+reload(true);
+refreshTimer = setInterval(quietRefresh, REFRESH_MS);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
