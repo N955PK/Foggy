@@ -238,6 +238,7 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 let mode='geo', hours=4, speed=1;
 let frames=[], idx=0, playing=!reduceMotion;
 let zoom=1, panX=0, panY=0;
+let homeZ=1, homeX=0, homeY=0, atHome=true;
 let holdUntil=0, acc=0, lastTick=performance.now();
 let loadRun=0, zenTimer=null;
 let layers={apt:true,cam:true};
@@ -503,6 +504,8 @@ function resize(){
   const dpr=Math.min(devicePixelRatio||1,3);
   cv.width=Math.round(innerWidth*dpr); cv.height=Math.round(innerHeight*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  computeHome();
+  if(atHome){zoom=homeZ;panX=homeX;panY=homeY;}
   clampPan(); draw(); buildRuler();
 }
 function view(){
@@ -534,11 +537,21 @@ function zoomAt(px,py,target){
   const ix=(px-v.tx)/v.s, iy=(py-v.ty)/v.s;
   const s2=v.s0*z2; zoom=z2;
   panX=px-ix*s2-(v.W-CROP.w*s2)/2; panY=py-iy*s2-(v.H-CROP.h*s2)/2;
-  clampPan(); draw(); syncZoomUI();
+  atHome=false; clampPan(); draw(); syncZoomUI();
   if(!playing) scheduleHires();
 }
-function resetView(){zoom=1;panX=panY=0;draw();syncZoomUI();}
-function syncZoomUI(){$('resetView').style.display=zoom>1.02?'block':'none';}
+const HOME_ANCHOR={x:438,y:340}; // mid-coast, in world px
+function computeHome(){
+  const W=innerWidth,H=innerHeight;
+  const s0=Math.min(W/CROP.w,H/CROP.h), cover=Math.max(W/CROP.w,H/CROP.h);
+  homeZ=Math.min(cover/s0*1.002,6);      // fill the screen, no letterbox
+  const s=s0*homeZ;
+  homeX=W/2-HOME_ANCHOR.x*s-(W-CROP.w*s)/2;
+  homeY=H/2-HOME_ANCHOR.y*s-(H-CROP.h*s)/2;
+}
+function goHome(){computeHome();zoom=homeZ;panX=homeX;panY=homeY;atHome=true;clampPan();draw();syncZoomUI();}
+function resetView(){goHome();}
+function syncZoomUI(){$('resetView').style.display=atHome?'none':'block';}
 
 /* ---------------- playback ---------------- */
 function tick(now){
@@ -641,7 +654,7 @@ cv.addEventListener('pointermove',e=>{
     panX+=mid.x-pinch.mid.x; panY+=mid.y-pinch.mid.y;
     pinch.mid=mid; clampPan(); draw();
   }else if(pts.size===1&&zoom>1.02){
-    panX+=dx; panY+=dy; clampPan(); draw();
+    panX+=dx; panY+=dy; atHome=false; clampPan(); draw(); syncZoomUI();
     if(!playing) scheduleHires();
   }
 });
@@ -651,7 +664,7 @@ function endPointer(e){
   if(e.type==='pointerup'&&!moved&&pts.size===0){
     const now=performance.now();
     if(now-lastTap.t<300&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30){
-      lastTap.t=0; zoom>1.5?resetView():zoomAt(e.clientX,e.clientY,3.2);
+      lastTap.t=0; zoom>homeZ*1.35?goHome():zoomAt(e.clientX,e.clientY,Math.min(18,homeZ*2.6));
     }else{
       lastTap={t:now,x:e.clientX,y:e.clientY};
       setTimeout(()=>{if(lastTap.t&&performance.now()-lastTap.t>=350){closeCard();toggleZen();lastTap.t=0;}},360);
