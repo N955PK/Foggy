@@ -523,8 +523,9 @@ function loadHires(){
 }
 
 /* ---------------- fog outlook (NWS TAF) ---------------- */
+let tafError=false;
 async function fetchTafs(){
-  if(Date.now()-tafFetched<25*60*1000&&Object.keys(tafs).length)return;
+  if(!tafError&&Date.now()-tafFetched<25*60*1000&&Object.keys(tafs).length)return;
   try{
     const ids=AIRPORTS.map(a=>a.id).join(',');
     const r=await fetch(`https://aviationweather.gov/api/data/taf?ids=${ids}&format=json`,{cache:'no-store'});
@@ -534,7 +535,8 @@ async function fetchTafs(){
     for(const t of j){ if(t&&t.icaoId&&Array.isArray(t.fcsts))
       tafs[t.icaoId]={from:t.validTimeFrom*1000,to:t.validTimeTo*1000,fcsts:t.fcsts}; }
     tafFetched=Date.now();
-  }catch(e){ toast('forecast source unreachable right now'); }
+    tafError=Object.keys(tafs).length===0;
+  }catch(e){ tafError=true; toast('forecast source unreachable right now'); }
 }
 function pvVis(v){
   if(v==null)return null;
@@ -550,7 +552,7 @@ function tafAt(id,T){
   let vis=null,wx='';
   for(const g of t.fcsts){
     const ch=g.fcstChange;
-    if((ch==null||ch==='FM')&&g.timeFrom*1000<=T){
+    if((ch==null||ch==='FM')&&g.probability==null&&g.timeFrom*1000<=T){
       const v=pvVis(g.visib); if(v!=null)vis=v;
       wx=g.wxString||'';
     }else if(ch==='BECMG'&&g.timeFrom*1000<=T){
@@ -717,7 +719,9 @@ function syncHUD(){
   if(tmode==='outlook'){
     chip.classList.remove('on'); $('liveTxt').textContent='OUTLOOK · TAF';
     $('frameTime').textContent=fmtTime.format(olT);
-    $('frameSub').textContent=`${fmtDate.format(olT)} · NWS terminal forecasts`;
+    $('frameSub').textContent=tafError
+      ?'forecast feed unreachable — dots show no data'
+      :`${fmtDate.format(olT)} · NWS terminal forecasts`;
     const p=Math.min(100,Math.max(0,(olT-olk0)/(olk1-olk0)*100)).toFixed(3)+'%';
     rThumb.style.left=p; rFill.style.width=p;
     return;
@@ -895,7 +899,7 @@ function restyleMarkers(){
 }
 function updateMarkers(v){
   v=v||view();
-  const showApt=layers.apt, showCam=layers.cam, showLbl=v.s>=0.85;
+  const showApt=layers.apt, showCam=layers.cam, showLbl=tmode==='outlook'||v.s>=0.85;
   for(const m of mkIndex){
     const on=m.type==='apt'?showApt:showCam;
     const sx=m.u*v.s+v.tx, sy=m.v*v.s+v.ty;
