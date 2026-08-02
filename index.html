@@ -81,6 +81,7 @@ header .brand,#status{pointer-events:auto}
 .icon-btn[aria-pressed="true"]{color:#0a0e13;background:var(--ink);border-color:var(--ink)}
 .spacer{flex:1}
 .dock-label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.14em;margin-right:-3px}
+#hourSel{flex:1;min-width:80px;accent-color:var(--accent);height:22px}
 body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;pointer-events:none}
 
 #legend{position:absolute;left:12px;bottom:calc(118px + env(safe-area-inset-bottom));z-index:4;transition:opacity .45s;
@@ -175,19 +176,25 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <div id="ruler" aria-label="Timeline"><div class="track"></div><div class="fill"></div><div id="ticks"></div><div class="thumb"></div></div>
     </div>
     <div class="row">
+      <div class="seg" id="segTime"><button data-t="live" aria-pressed="true">LIVE</button><button data-t="replay">REPLAY</button><button data-t="outlook">OUTLOOK</button></div>
       <span class="dock-label">SPAN</span>
       <div class="seg" id="segHours"><button data-h="2">2h</button><button data-h="4" aria-pressed="true">4h</button><button data-h="8">8h</button></div>
       <span class="dock-label">SPEED</span>
       <div class="seg" id="segSpeed"><button data-s="0.5">½×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="2">2×</button></div>
       <span class="dock-label">VIEW</span>
       <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button></div>
-      <button class="icon-btn" id="tglApt" aria-pressed="true" aria-label="Airport weather layer" title="Airports">
+      <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
         <svg viewBox="0 0 16 16"><path d="M15 9.5v-1.6L9.6 5.6V1.9C9.6 1.1 9 .4 8 .4s-1.6.7-1.6 1.5v3.7L1 7.9v1.6l5.4-1.5v3.6L4.6 13v1.2L8 13.2l3.4 1V13l-1.8-1.4V8z"/></svg></button>
-      <button class="icon-btn" id="tglCam" aria-pressed="true" aria-label="Webcam layer" title="Webcams">
+      <button class="icon-btn" id="tglCam" aria-pressed="false" aria-label="Webcam layer" title="Webcams">
         <svg viewBox="0 0 16 16"><path d="M1.5 4.2h8.2c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H1.5c-.7 0-1.2-.5-1.2-1.2V5.4c0-.7.5-1.2 1.2-1.2zm10.4 2.6 3.2-1.9c.3-.2.6 0 .6.4v5.4c0 .4-.3.6-.6.4l-3.2-1.9z"/></svg></button>
       <span class="spacer"></span>
       <button class="icon-btn" id="fsBtn" aria-label="Fullscreen"><svg viewBox="0 0 16 16"><path d="M1 6V1h5v2H3v3H1zm14 0h-2V3h-3V1h5v5zM1 10h2v3h3v2H1v-5zm12 3v-3h2v5h-5v-2h3z"/></svg></button>
       <button class="icon-btn" id="infoBtn" aria-label="About"><svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1.1 1.1 0 110 2.2A1.1 1.1 0 018 4zm1.2 8H6.8v-1.2h.6V8.4h-.6V7.2h1.8v3.6h.6V12z"/></svg></button>
+    </div>
+    <div class="row" id="replayBar" style="display:none">
+      <div class="seg" id="dayChips"></div>
+      <input id="hourSel" type="range" min="0" max="21" step="1" value="6" aria-label="Replay start hour">
+      <span id="replayLbl" class="dock-label" style="letter-spacing:.03em"></span>
     </div>
   </div>
 
@@ -210,6 +217,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
     <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are live Caltrans and Oregon TripCheck roadside cameras near the coast, tinted by the visibility at the nearest airport; tap for the live image.</p>
     <p><b>Zoom sharpening:</b> the loop plays at 2&nbsp;km resolution. Zoom in and pause, and the current frame reloads at 1&nbsp;km — "HD" appears next to the frame time.</p>
+    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b>: airport dots recolor to the visibility forecast in official NWS terminal forecasts (TAFs), with an "FG" tag where fog is explicitly forecast — drag the timeline to watch tonight's fog form and burn off before it happens. TAFs are only issued for larger fields, so some airports show gray in outlook. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS / <a href="https://www.star.nesdis.noaa.gov/goes/" target="_blank" rel="noopener">STAR</a> (GeoColor by CIRA &amp; NOAA). Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
@@ -241,11 +249,16 @@ let zoom=1, panX=0, panY=0;
 let homeZ=1, homeX=0, homeY=0, atHome=true;
 let holdUntil=0, acc=0, lastTick=performance.now();
 let loadRun=0, zenTimer=null;
-let layers={apt:true,cam:true};
+let layers={apt:false,cam:false};
 let hires={stamp:null,img:null}, hiresCache=new Map(), hiresDead=false, hiresTimer=null;
 let obs={};
 let cams=[];
 let openMk=null;
+let tmode='live';                 // 'live' | 'replay' | 'outlook'
+let lastListing=[];               // full CDN listing (for replay range discovery)
+let replayDay=null, replayHour=6; // PT-midnight epoch + start hour
+let tafs={}, tafFetched=0;        // TAF cache
+let olk0=0, olk1=0, olT=0;        // outlook window + selected forecast time
 
 /* ---------------- GOES fixed-grid projection ---------------- */
 const PROJ={lon0:-137.0*Math.PI/180, req:6378137, rpol:6356752.31414, H:42164160,
@@ -400,9 +413,16 @@ async function listFrames(){
     if(!byTs.has(ts)) byTs.set(ts,{}); byTs.get(ts)[+size]=file;}
   if(!byTs.size) throw new Error('empty listing');
   const size=SIZE_PREF.find(s=>sizes.has(s))||[...sizes].sort((a,b)=>b-a)[0];
-  return [...byTs.entries()].filter(([,f])=>f[size])
+  lastListing=[...byTs.entries()].filter(([,f])=>f[size])
     .map(([ts,f])=>({t:tsToMs(ts),stamp:ts,url:baseUrl()+f[size]}))
     .sort((a,b)=>a.t-b.t);
+  return lastListing;
+}
+function windowRange(all,t0,t1){
+  const win=all.filter(f=>f.t>=t0&&f.t<=t1);
+  const step=Math.max(1,Math.ceil(win.length/MAXF));
+  const picked=[]; for(let i=win.length-1;i>=0;i-=step) picked.push(win[i]);
+  return picked.reverse();
 }
 function synthFrames(minuteMod){
   const out=[]; let t=Date.now()-2*60000; t-=t%60000;
@@ -468,7 +488,7 @@ async function reload(fullVeil){
   }
 }
 async function quietRefresh(){
-  if(document.hidden)return;
+  if(document.hidden||tmode!=='live')return;
   try{
     const all=await listFrames();
     if(!all.length||!frames.length)return;
@@ -502,6 +522,119 @@ function loadHires(){
   im.src=hiresUrl(stamp);
 }
 
+/* ---------------- fog outlook (NWS TAF) ---------------- */
+async function fetchTafs(){
+  if(Date.now()-tafFetched<25*60*1000&&Object.keys(tafs).length)return;
+  try{
+    const ids=AIRPORTS.map(a=>a.id).join(',');
+    const r=await fetch(`https://aviationweather.gov/api/data/taf?ids=${ids}&format=json`,{cache:'no-store'});
+    if(!r.ok)throw 0;
+    let j=await r.json(); if(!Array.isArray(j)) j=(j&&j.data)||[];
+    tafs={};
+    for(const t of j){ if(t&&t.icaoId&&Array.isArray(t.fcsts))
+      tafs[t.icaoId]={from:t.validTimeFrom*1000,to:t.validTimeTo*1000,fcsts:t.fcsts}; }
+    tafFetched=Date.now();
+  }catch(e){ toast('forecast source unreachable right now'); }
+}
+function pvVis(v){
+  if(v==null)return null;
+  if(typeof v==='number')return v;
+  const s=String(v).trim();
+  if(s.endsWith('+'))return (parseFloat(s)||6)+0.01;
+  const m=s.match(/^(\d+)\/(\d+)$/); if(m)return +m[1]/+m[2];
+  const f=parseFloat(s); return isNaN(f)?null:f;
+}
+function tafAt(id,T){
+  const t=tafs[id]; if(!t)return null;
+  if(T<t.from-30*60000||T>t.to)return null;
+  let vis=null,wx='';
+  for(const g of t.fcsts){
+    const ch=g.fcstChange;
+    if((ch==null||ch==='FM')&&g.timeFrom*1000<=T){
+      const v=pvVis(g.visib); if(v!=null)vis=v;
+      wx=g.wxString||'';
+    }else if(ch==='BECMG'&&g.timeFrom*1000<=T){
+      const v=pvVis(g.visib); if(v!=null)vis=v;
+      if(g.wxString)wx=g.wxString;
+    }
+  }
+  for(const g of t.fcsts){
+    const ch=g.fcstChange||'';
+    if((ch==='TEMPO'||ch.indexOf('PROB')===0)&&g.timeFrom*1000<=T&&T<g.timeTo*1000){
+      const v=pvVis(g.visib); if(v!=null&&(vis==null||v<vis))vis=v;
+      if(g.wxString)wx=wx?wx+' '+g.wxString:g.wxString;
+    }
+  }
+  return {vis,wx};
+}
+function enterOutlook(){
+  setPlaying(false);
+  if(frames.length){idx=frames.length-1;}
+  olk0=Date.now(); olk1=olk0+18*3600000; olT=olk0;
+  if(!layers.apt){layers.apt=true;$('tglApt').setAttribute('aria-pressed','true');}
+  buildRuler(); restyleMarkers(); updateMarkers(); syncHUD(); draw();
+  fetchTafs().then(()=>{restyleMarkers();if(openMk)renderCard();syncHUD();});
+  toast('drag the timeline into the next 18 hours');
+}
+
+/* ---------------- replay ---------------- */
+function ptMidnight(t){const {h,m}=ptHM(t);return t-(h*3600000+m*60000)-(t%60000);}
+function rT0(){return (replayDay||ptMidnight(Date.now()))+replayHour*3600000;}
+function buildDayChips(){
+  const el=$('dayChips'); el.innerHTML='';
+  const days=new Map();
+  for(const f of lastListing){const d=ptMidnight(f.t); if(!days.has(d))days.set(d,f.t);}
+  const sorted=[...days.keys()].sort((a,b)=>a-b);
+  if(!sorted.length)return;
+  if(replayDay==null||!days.has(replayDay)) replayDay=sorted[sorted.length-1];
+  for(const d of sorted){
+    const b=document.createElement('button');
+    b.textContent=fmtDate.format(d+12*3600000).replace(/,.*$/,'')+' '+new Date(d+12*3600000).toLocaleDateString('en-US',{timeZone:PT,month:'numeric',day:'numeric'});
+    b.setAttribute('aria-pressed',d===replayDay);
+    b.onclick=()=>{replayDay=d;
+      el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true'); loadReplay();};
+    el.appendChild(b);
+  }
+  syncReplayLbl();
+}
+function syncReplayLbl(){
+  const h=replayHour%12===0?12:replayHour%12, ap=replayHour<12?'AM':'PM';
+  $('replayLbl').textContent=`from ${h} ${ap} PT · ${hours}h`;
+}
+async function loadReplay(){
+  syncReplayLbl();
+  const run=++loadRun;
+  toast('loading replay…');
+  try{
+    const all=lastListing.length?lastListing:await listFrames();
+    const list=windowRange(all,rT0(),rT0()+hours*3600000);
+    if(list.length<2){toast('no imagery stored for that window');return;}
+    const ok=await preload(list,()=>{});
+    if(run!==loadRun)return;
+    if(ok.length<2){toast('no imagery stored for that window');return;}
+    frames=ok; idx=0; hires={stamp:null,img:null};
+    buildRuler(); syncHUD(); draw();
+    holdUntil=performance.now()+400; setPlaying(true);
+  }catch(e){ if(run===loadRun)toast('couldn\u2019t load that replay window'); }
+}
+
+/* ---------------- time-mode switching ---------------- */
+async function setTMode(v){
+  if(v===tmode)return;
+  tmode=v;
+  $('replayBar').style.display=v==='replay'?'flex':'none';
+  if(v==='outlook'){ enterOutlook(); return; }
+  restyleMarkers();
+  if(v==='replay'){
+    if(!lastListing.length){ try{await listFrames();}catch(e){} }
+    buildDayChips(); loadReplay();
+  }else{ // live
+    reload(false); setPlaying(!reduceMotion);
+  }
+  syncHUD();
+}
+
 /* ---------------- canvas / view ---------------- */
 function resize(){
   const dpr=Math.min(devicePixelRatio||1,3);
@@ -532,6 +665,7 @@ function draw(){
       const hs=hires.img.naturalWidth/BASE_W;
       ctx.drawImage(hires.img,CROP.x*hs,CROP.y*hs,CROP.w*hs,CROP.h*hs,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
     }
+    if(tmode==='outlook'){ctx.fillStyle='rgba(10,14,19,.38)';ctx.fillRect(0,0,v.W,v.H);}
   }
   updateMarkers(v);
 }
@@ -579,15 +713,28 @@ function setPlaying(p){
 
 /* ---------------- HUD / ruler ---------------- */
 function syncHUD(){
+  const chip=$('liveChip');
+  if(tmode==='outlook'){
+    chip.classList.remove('on'); $('liveTxt').textContent='OUTLOOK · TAF';
+    $('frameTime').textContent=fmtTime.format(olT);
+    $('frameSub').textContent=`${fmtDate.format(olT)} · NWS terminal forecasts`;
+    const p=Math.min(100,Math.max(0,(olT-olk0)/(olk1-olk0)*100)).toFixed(3)+'%';
+    rThumb.style.left=p; rFill.style.width=p;
+    return;
+  }
   const f=frames[idx]; if(!f)return;
   $('frameTime').textContent=fmtTime.format(f.t);
   const hd=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?' · HD 1 km':'';
   $('frameSub').textContent=`${fmtDate.format(f.t)} · GOES-18 · ${PRODUCTS[mode].label}${hd}`;
   const last=frames[frames.length-1];
-  const ageMin=Math.max(0,Math.round((Date.now()-last.t)/60000));
-  const chip=$('liveChip'), live=ageMin<=16;
-  chip.classList.toggle('on',live);
-  $('liveTxt').textContent=live?`LIVE · ${ageMin}m ago`:`DELAYED · ${ageMin}m`;
+  if(tmode==='replay'){
+    chip.classList.remove('on'); $('liveTxt').textContent='REPLAY';
+  }else{
+    const ageMin=Math.max(0,Math.round((Date.now()-last.t)/60000));
+    const live=ageMin<=16;
+    chip.classList.toggle('on',live);
+    $('liveTxt').textContent=live?`LIVE · ${ageMin}m ago`:`DELAYED · ${ageMin}m`;
+  }
   const t0=frames[0].t,t1=last.t,span=Math.max(1,t1-t0);
   const x=((f.t-t0)/span*100).toFixed(3)+'%';
   rThumb.style.left=x; rFill.style.width=x;
@@ -597,8 +744,10 @@ setInterval(()=>frames.length&&syncHUD(),30000);
 const ruler=$('ruler'),rThumb=ruler.querySelector('.thumb'),rFill=ruler.querySelector('.fill'),rTicks=$('ticks');
 function buildRuler(){
   rTicks.innerHTML='';
-  if(frames.length<2)return;
-  const t0=frames[0].t,t1=frames[frames.length-1].t,span=t1-t0;
+  let t0,t1;
+  if(tmode==='outlook'){t0=olk0;t1=olk1;}
+  else{ if(frames.length<2)return; t0=frames[0].t; t1=frames[frames.length-1].t; }
+  const span=t1-t0;
   const w=ruler.clientWidth||300;
   const labEveryMin=span<=2.3*3600000?30:span<=4.6*3600000?60:120;
   const {m}=ptHM(t0);
@@ -621,9 +770,14 @@ function buildRuler(){
 }
 let scrubResume=false;
 function seekFromEvent(e){
-  if(frames.length<2)return;
   const r=ruler.getBoundingClientRect();
   const frac=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
+  if(tmode==='outlook'){
+    olT=olk0+frac*(olk1-olk0);
+    restyleMarkers(); syncHUD(); if(openMk)renderCard();
+    return;
+  }
+  if(frames.length<2)return;
   const t=frames[0].t+frac*(frames[frames.length-1].t-frames[0].t);
   let best=0,bd=Infinity;
   frames.forEach((f,i)=>{const d=Math.abs(f.t-t);if(d<bd){bd=d;best=i;}});
@@ -718,14 +872,26 @@ function addCamMarkers(list){
   restyleMarkers(); updateMarkers(view());
 }
 function restyleMarkers(){
+  const useTaf=tmode==='outlook';
   for(const a of AIRPORTS){
-    const o=obs[a.id], cls=visClass(o&&o.ok?o.vis:null);
+    let vis=null, extra='';
+    if(useTaf){
+      const f=tafAt(a.id,olT);
+      if(f){vis=f.vis; if(/FG/.test(f.wx||''))extra=' FG';}
+    }else{
+      const o=obs[a.id]; if(o&&o.ok)vis=o.vis;
+    }
+    const cls=visClass(vis);
     if(a._mk){a._mk.className='mk apt '+cls;
-      a._mk.querySelector('b').textContent=`${a.id.slice(1)} ${o&&o.ok&&o.vis!=null?visLabel(o.vis)+'sm':''}`.trim();}
+      a._mk.querySelector('b').textContent=(a.id.slice(1)+' '+(vis!=null?visLabel(vis)+'sm':'')+extra).trim();}
   }
   for(const c of cams){
-    const o=c.apt&&obs[c.apt.id];
-    if(c._mk)c._mk.className='mk cam '+visClass(o&&o.ok?o.vis:null);
+    let vis=null;
+    if(c.apt){
+      if(useTaf){const f=tafAt(c.apt.id,olT); vis=f?f.vis:null;}
+      else{const o=obs[c.apt.id]; vis=o&&o.ok?o.vis:null;}
+    }
+    if(c._mk)c._mk.className='mk cam '+visClass(vis);
   }
 }
 function updateMarkers(v){
@@ -782,7 +948,21 @@ function renderCard(){
   if(!openMk)return;
   const B=$('cardBody');
   if(openMk.type==='apt'){
-    const a=openMk.ref,o=obs[a.id];
+    const a=openMk.ref;
+    if(tmode==='outlook'){
+      const f=tafAt(a.id,olT);
+      const cls=visClass(f?f.vis:null);
+      const rows=[0,3,6,9,12,15,18].map(h=>{
+        const T=olk0+h*3600000, g=tafAt(a.id,T);
+        return `<span>${h?'+'+h+'h':'now'} <b style="color:var(--${visClass(g?g.vis:null)})">${g&&g.vis!=null?visLabel(g.vis)+' sm':'—'}</b></span><span>${g&&g.wx?esc(g.wx):''}</span>`;
+      }).join('');
+      B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.id} · NWS terminal forecast (TAF)</div>
+        <div class="big"><i style="background:var(--${cls})"></i>${f&&f.vis!=null?visLabel(f.vis)+' sm at '+fmtHM.format(olT):(tafs[a.id]?'—':'no TAF issued for this field')}</div>
+        <div class="grid">${rows}</div>
+        <div class="foot"><span>forecast visibility · statute miles</span><span></span></div>`;
+      return;
+    }
+    const o=obs[a.id];
     const cls=visClass(o&&o.ok?o.vis:null);
     const age=o&&o.time?Math.round((Date.now()-o.time)/60000):null;
     B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.id} · aviation weather (NWS)</div>
@@ -824,14 +1004,21 @@ $('playBtn').onclick=()=>setPlaying(!playing);
 $('resetView').onclick=resetView;
 function segWire(el,attr,fn){el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
   el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); fn(b.dataset[attr]); wake();});}
-segWire($('segHours'),'h',v=>{hours=+v;reload(false);toast(`showing last ${v} hours`);});
+segWire($('segHours'),'h',v=>{hours=+v;
+  if(tmode==='replay')loadReplay();
+  else if(tmode==='live'){reload(false);toast(`showing last ${v} hours`);}});
+segWire($('segTime'),'t',v=>setTMode(v));
+$('hourSel').addEventListener('input',()=>{replayHour=+$('hourSel').value;syncReplayLbl();});
+$('hourSel').addEventListener('change',()=>{replayHour=+$('hourSel').value;loadReplay();});
+setInterval(()=>{if(tmode==='outlook'&&!document.hidden)fetchTafs().then(()=>{restyleMarkers();syncHUD();});},WX_REFRESH);
 segWire($('segSpeed'),'s',v=>{speed=+v;});
 segWire($('segMode'),'m',v=>{const prev=mode;mode=v;hires={stamp:null,img:null};hiresCache.clear();reloadMode(prev);});
 async function reloadMode(prev){
   toast(`loading ${PRODUCTS[mode].label}…`);
   const keep=frames,keepIdx=idx,run=++loadRun;
   try{
-    const list=windowed(await listFrames());
+    const all=await listFrames();
+    const list=tmode==='replay'?windowRange(all,rT0(),rT0()+hours*3600000):windowed(all);
     const ok=await preload(list,()=>{});
     if(run!==loadRun)return;
     if(ok.length<2)throw new Error('empty');
