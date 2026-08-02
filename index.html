@@ -248,7 +248,7 @@ let frames=[], idx=0, playing=!reduceMotion;
 let zoom=1, panX=0, panY=0;
 let homeZ=1, homeX=0, homeY=0, atHome=true;
 let holdUntil=0, acc=0, lastTick=performance.now();
-let loadRun=0, zenTimer=null;
+let loadRun=0;
 let layers={apt:false,cam:false};
 let hires={stamp:null,img:null}, hiresCache=new Map(), hiresDead=false, hiresTimer=null;
 let obs={};
@@ -795,7 +795,6 @@ cv.addEventListener('pointerdown',e=>{
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
   if(pts.size===2){const [a,b]=[...pts.values()];
     pinch={d:Math.hypot(a.x-b.x,a.y-b.y),zoom,mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}};}
-  wake();
 });
 cv.addEventListener('pointermove',e=>{
   if(!pts.has(e.pointerId))return;
@@ -988,17 +987,10 @@ function renderCard(){
 }
 
 /* ---------------- chrome / controls ---------------- */
-function wake(){
-  document.body.classList.remove('zen');
-  clearTimeout(zenTimer);
-  zenTimer=setTimeout(()=>{if(playing&&!$('info').classList.contains('open')&&!openMk)document.body.classList.add('zen');},4500);
-}
-function toggleZen(){
-  if(document.body.classList.contains('zen'))wake();
-  else{clearTimeout(zenTimer);document.body.classList.add('zen');}
-}
-['pointermove','pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{
-  if(ev==='pointerdown'&&e.target===cv)return; wake();}));
+function wake(){document.body.classList.remove('zen');}
+function toggleZen(){document.body.classList.toggle('zen');}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{
+  if(e.target===cv)return; wake();}));
 
 $('playBtn').onclick=()=>setPlaying(!playing);
 $('resetView').onclick=resetView;
