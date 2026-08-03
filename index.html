@@ -557,6 +557,7 @@ function pumpTiles(){
     const im=new Image(); im.decoding='async';
     im.onload=()=>{tileActive--;
       const e=tileCache.get(q.key); if(e){e.img=im;e.ok=true;e.pending=false;}
+      if(q.key===sentinelKey(q.st))promoteTail(q.st);
       trimTileCache();
       if(frames[idx]&&(frames[idx].stamp===q.st||tmode==='outlook'))scheduleDraw();
       pumpTiles();};
@@ -609,13 +610,15 @@ function drawParent(st,z,r,c,wt,PADY,v){
 function drawTiles(f,v){
   const z=pickZ(v), sp=tileSpan(v,z);
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  let drew=false;
   for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++){
     const e=tileCache.get(tKey(f.stamp,z,r,c));
-    if(e&&e.ok)drawTileAt(e,r,c,sp.wt,sp.PADY,v);
-    else{ drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v); reqTile(f.stamp,z,r,c,0); }
+    if(e&&e.ok){drawTileAt(e,r,c,sp.wt,sp.PADY,v);drew=true;}
+    else{ if(drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v))drew=true; reqTile(f.stamp,z,r,c,0); }
   }
   if(z>1){const zp=Math.max(0,z-2),spp=tileSpan(v,zp);   // keep coarse parents warm
     for(let r=spp.r0;r<=spp.r1;r++)for(let c=spp.c0;c<=spp.c1;c++)reqTile(f.stamp,zp,r,c,2);}
+  return drew;
 }
 function prefetchAhead(v){
   if(!frames.length)return;
@@ -625,7 +628,39 @@ function prefetchAhead(v){
     for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++)reqTile(f.stamp,z,r,c,k+2);
   }
 }
-function resetTiles(){tileCache.clear();tileQueue.length=0;}
+function resetTiles(){tileCache.clear();tileQueue.length=0;tailPending=[];lastGoodStamp=null;}
+let tailPending=[], lastGoodStamp=null;
+function sentinelKey(st){return st+'/0/0_0';}
+function gateTail(list){
+  const ready=[];
+  for(let i=0;i<list.length;i++){
+    const f=list[i];
+    if(i>=list.length-2){
+      const e=tileCache.get(sentinelKey(f.stamp));
+      if(!(e&&e.ok)){
+        if(!tailPending.some(x=>x.stamp===f.stamp))tailPending.push(f);
+        reqTile(f.stamp,0,0,0,0);
+        continue;
+      }
+    }
+    ready.push(f);
+  }
+  return ready.length>=2?ready:list;
+}
+function promoteTail(st){
+  if(tmode!=='live')return;
+  const i=tailPending.findIndex(f=>f.stamp===st);
+  if(i<0)return;
+  const f=tailPending.splice(i,1)[0];
+  if(frames.some(x=>x.stamp===f.stamp))return;
+  const wasLast=idx===frames.length-1;
+  frames.push(f); frames.sort((a,b)=>a.t-b.t);
+  const cutoff=frames[frames.length-1].t-hours*3600000;
+  while(frames.length>maxFrames()+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
+  if(wasLast)idx=frames.length-1;
+  for(let r=0;r<2;r++)for(let c=0;c<2;c++)reqTile(f.stamp,1,r,c,5);
+  buildRuler(); syncHUD();
+}
 function warmLoopBase(){
   if(engine!=='tiles')return;
   for(const f of frames)
@@ -724,7 +759,8 @@ async function reload(fullVeil){
     try{
       const times=await tileTimes(false);
       if(run!==loadRun)return;
-      const list=windowed(times);
+      let list=windowed(times);
+      if(tmode==='live')list=gateTail(list);
       if(list.length<2)throw 0;
       frames=list; idx=frames.length-1;
       warmLoopBase();
@@ -773,8 +809,20 @@ async function quietRefresh(){
       const times=await tileTimes(false);
       if(!frames.length)return;
       const newest=frames[frames.length-1].t;
-      const fresh=times.filter(f=>f.t>newest);
+      let fresh=times.filter(f=>f.t>newest);
+      tailPending=tailPending.filter(f=>f.t>newest);
       if(!fresh.length)return;
+      const admitted=[];
+      for(const f of fresh){
+        const e=tileCache.get(sentinelKey(f.stamp));
+        if(e&&e.ok)admitted.push(f);
+        else{
+          if(!tailPending.some(x=>x.stamp===f.stamp))tailPending.push(f);
+          reqTile(f.stamp,0,0,0,0);
+        }
+      }
+      if(!admitted.length)return;
+      fresh=admitted;
       const wasLast=idx===frames.length-1;
       frames=frames.concat(fresh);
       const cutoff=frames[frames.length-1].t-hours*3600000;
@@ -1098,6 +1146,7 @@ async function loadReplay(){
     if(run!==loadRun)return;
     if(ok.length<2){toast('no imagery stored for that window');return;}
     frames=ok; idx=0; hires={stamp:null,img:null}; resetOverlays();
+    tailPending=[];
     warmLoopBase();
     buildRuler(); syncHUD(); draw();
     holdUntil=performance.now()+400; setPlaying(true);
@@ -1168,7 +1217,11 @@ function draw(){
   const f=frames[idx];
   if(f){
     if(engine==='tiles'&&TILE.ready){
-      drawTiles(f,v);
+      if(drawTiles(f,v))lastGoodStamp=f.stamp;
+      else if(lastGoodStamp&&lastGoodStamp!==f.stamp){
+        const g=frames.find(x=>x.stamp===lastGoodStamp);
+        if(g)drawTiles(g,v);
+      }
       prefetchAhead(v);
     }else if(f.bmp){
       ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
