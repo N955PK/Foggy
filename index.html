@@ -517,13 +517,16 @@ function pickZ(v){
   return Math.max(0,Math.min(TILE.maxZ,z));
 }
 function tileSpan(v,z){
-  const wt=BASE_W/Math.pow(2,z);
+  // SLIDER centers the 5000x3000 CONUS image in its square pyramid (CropAnchor Center):
+  // 20% padding above and below -> pyramidY = imageWorldY + PADY
+  const wt=BASE_W/Math.pow(2,z), PADY=(BASE_W-BASE_H)/2;
   const bx0=CROP.x+(0-v.tx)/v.s, by0=CROP.y+(0-v.ty)/v.s;
   const bx1=CROP.x+(v.W-v.tx)/v.s, by1=CROP.y+(v.H-v.ty)/v.s;
   const n=Math.pow(2,z);
-  return {wt,
+  return {wt,PADY,
     c0:Math.max(0,Math.floor(bx0/wt)), c1:Math.min(n-1,Math.floor(bx1/wt)),
-    r0:Math.max(0,Math.floor(by0/wt)), r1:Math.min(Math.min(n,Math.ceil(BASE_H/wt))-1,Math.floor(by1/wt))};
+    r0:Math.max(Math.max(0,Math.floor(PADY/wt)),Math.floor((by0+PADY)/wt)),
+    r1:Math.min(Math.min(n-1,Math.floor((PADY+BASE_H-0.001)/wt)),Math.floor((by1+PADY)/wt))};
 }
 function tKey(st,z,r,c){return st+'/'+z+'/'+r+'_'+c;}
 function reqTile(st,z,r,c,pri){
@@ -556,20 +559,30 @@ function trimTileCache(){
     tileCache.delete(k);
   }
 }
-function drawTileAt(e,r,c,wt,v){
-  const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((r*wt)-CROP.y)*v.s, sPx=wt*v.s;
-  const over=Math.max(0,(r+1)*wt-BASE_H), frac=1-over/wt;
-  ctx.drawImage(e.img,0,0,e.img.naturalWidth,e.img.naturalHeight*frac,x,y,sPx,sPx*frac);
+function drawTileAt(e,r,c,wt,PADY,v){
+  const wy0=r*wt-PADY, wy1=wy0+wt;
+  const cy0=Math.max(0,wy0), cy1=Math.min(BASE_H,wy1);
+  if(cy1<=cy0)return;
+  const T=e.img.naturalHeight;
+  const sy=(cy0-wy0)/wt*T, sh=(cy1-cy0)/wt*T;
+  const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((cy0)-CROP.y)*v.s;
+  ctx.drawImage(e.img,0,sy,e.img.naturalWidth,sh, x,y,wt*v.s,(cy1-cy0)*v.s);
 }
-function drawParent(st,z,r,c,wt,v){
+function drawParent(st,z,r,c,wt,PADY,v){
+  const wy0=r*wt-PADY, wy1=wy0+wt;
+  const cy0=Math.max(0,wy0), cy1=Math.min(BASE_H,wy1);
+  if(cy1<=cy0)return true;
   for(let pz=z-1;pz>=Math.max(0,z-3);pz--){
     const f=Math.pow(2,z-pz), pr=Math.floor(r/f), pc=Math.floor(c/f);
     const e=tileCache.get(tKey(st,pz,pr,pc));
     if(e&&e.ok){
       const T=e.img.naturalWidth;
-      const sx=(c-pc*f)*T/f, sy=(r-pr*f)*T/f, ss=T/f;
-      const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((r*wt)-CROP.y)*v.s, sPx=wt*v.s;
-      ctx.drawImage(e.img,sx,sy,ss,ss,x,y,sPx,sPx);
+      const sx=(c-pc*f)*T/f;
+      const syBase=(r-pr*f)*T/f;
+      const sy=syBase+(cy0-wy0)/wt*(T/f);
+      const sh=(cy1-cy0)/wt*(T/f);
+      const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((cy0)-CROP.y)*v.s;
+      ctx.drawImage(e.img,sx,sy,T/f,sh, x,y,wt*v.s,(cy1-cy0)*v.s);
       return true;
     }
   }
@@ -580,8 +593,8 @@ function drawTiles(f,v){
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++){
     const e=tileCache.get(tKey(f.stamp,z,r,c));
-    if(e&&e.ok)drawTileAt(e,r,c,sp.wt,v);
-    else{ drawParent(f.stamp,z,r,c,sp.wt,v); if(!e||!e.err)reqTile(f.stamp,z,r,c,0); }
+    if(e&&e.ok)drawTileAt(e,r,c,sp.wt,sp.PADY,v);
+    else{ drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v); if(!e||!e.err)reqTile(f.stamp,z,r,c,0); }
   }
   if(z>1){const zp=Math.max(0,z-2),spp=tileSpan(v,zp);   // keep coarse parents warm
     for(let r=spp.r0;r<=spp.r1;r++)for(let c=spp.c0;c<=spp.c1;c++)reqTile(f.stamp,zp,r,c,2);}
