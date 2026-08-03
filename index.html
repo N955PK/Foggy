@@ -37,6 +37,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .mk.v3 i{background:var(--v3)} .mk.vna i{background:var(--vna)}
 .mk.v0 svg{color:var(--v0)} .mk.v1 svg{color:var(--v1)} .mk.v2 svg{color:var(--v2)}
 .mk.v3 svg{color:var(--v3)} .mk.vna svg{color:var(--vna)}
+.mk.fire svg{filter:drop-shadow(0 0 4px rgba(255,92,57,.65)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
 
 /* ---- header ---- */
 header{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:flex-start;
@@ -155,7 +156,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
   <div id="lyr"></div>
 
   <header id="hdr">
-    <div class="brand">fog<span class="slash">/</span>west
+    <div class="brand"><span id="brandA">fog</span><span class="slash">/</span>west
       <small>CA · OR · WA — marine layer &amp; tule fog, live</small></div>
     <div id="status">
       <div id="liveChip"><span class="dot"></span><span id="liveTxt">CONNECTING</span></div>
@@ -182,12 +183,14 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <span class="dock-label">SPEED</span>
       <div class="seg" id="segSpeed"><button data-s="0.5">½×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="2">2×</button></div>
       <span class="dock-label">VIEW</span>
-      <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button></div>
+      <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button><button data-m="fire">Fire</button></div>
       <span class="dock-label">SAT</span>
       <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
       <button class="icon-btn" id="tglHD" aria-pressed="false" title="1 km HD loop — heavier data" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.05em">HD</button>
       <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
         <svg viewBox="0 0 16 16"><path d="M15 9.5v-1.6L9.6 5.6V1.9C9.6 1.1 9 .4 8 .4s-1.6.7-1.6 1.5v3.7L1 7.9v1.6l5.4-1.5v3.6L4.6 13v1.2L8 13.2l3.4 1V13l-1.8-1.4V8z"/></svg></button>
+      <button class="icon-btn" id="tglFire" aria-pressed="false" aria-label="Wildfire layer" title="Wildfires">
+        <svg viewBox="0 0 16 16"><path d="M8.6.6c.3 2.3-.7 3.6-1.9 4.9C5.4 6.9 4 8.4 4 10.6 4 13.6 6.2 15.5 8 15.5s4-1.6 4-4.6c0-1.2-.4-2.3-1-3.2-.3 1-.8 1.6-1.5 2 .3-2.4-.4-5.6-.9-9.1z"/></svg></button>
       <button class="icon-btn" id="tglCam" aria-pressed="false" aria-label="Webcam layer" title="Webcams">
         <svg viewBox="0 0 16 16"><path d="M1.5 4.2h8.2c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H1.5c-.7 0-1.2-.5-1.2-1.2V5.4c0-.7.5-1.2 1.2-1.2zm10.4 2.6 3.2-1.9c.3-.2.6 0 .6.4v5.4c0 .4-.3.6-.6.4l-3.2-1.9z"/></svg></button>
       <span class="spacer"></span>
@@ -207,7 +210,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
   <div id="veil">
     <div class="fogblob a"></div><div class="fogblob b"></div>
     <div class="inner">
-      <div class="brand">fog<span class="slash">/</span>west<small>CA · OR · WA — marine layer &amp; tule fog, live</small></div>
+      <div class="brand"><span id="brandA">fog</span><span class="slash">/</span>west<small>CA · OR · WA — marine layer &amp; tule fog, live</small></div>
       <div id="loadMsg">contacting GOES-West…</div>
       <div id="bar"><i></i></div>
       <div id="errBox"><p id="errTxt"></p><button id="retryBtn">RETRY</button></div>
@@ -219,10 +222,12 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <h2>fog<span class="slash">/</span>west</h2>
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
     <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are live Caltrans and Oregon TripCheck roadside cameras near the coast, tinted by the visibility at the nearest airport; tap for the live image.</p>
-    <p><b>Resolution:</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
+    <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
+    <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
+    <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
     <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
-    <p>Imagery: NOAA / NESDIS / <a href="https://www.star.nesdis.noaa.gov/goes/" target="_blank" rel="noopener">STAR</a> (GeoColor by CIRA &amp; NOAA). Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
+    <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
 </div>
 
@@ -244,7 +249,8 @@ const REGIONS={
 };
 let region='west', PROJ=REGIONS.west;
 const PRODUCTS={geo:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'GeoColor'},
-                ir:{dir:'07',token:'07',label:'IR 3.9 µm'}};
+                ir:{dir:'07',token:'07',label:'IR 3.9 µm'},
+                fire:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'Fire Temperature'}};
 const BASE_W=2500, BASE_H=1500, HIRES_SCALE=2;
 const SIZE_PREF=[2500,1250,5000,625];
 let hd=false, hdPlus=false;
@@ -265,7 +271,7 @@ let zoom=1, panX=0, panY=0;
 let homeZ=1, homeX=0, homeY=0, atHome=true;
 let holdUntil=0, acc=0, lastTick=performance.now();
 let loadRun=0;
-let layers={apt:false,cam:false};
+let layers={apt:false,cam:false,fire:false};
 let hires={stamp:null,img:null}, hiresCache=new Map(), hiresDead=false, hiresTimer=null;
 let obs={};
 let cams=[];
@@ -406,6 +412,130 @@ async function loadCaltrans(){
   return out;
 }
 
+/* ---------------- tiled imagery engine (CIRA SLIDER) ---------------- */
+const SLIDER='https://rammb-slider.cira.colostate.edu';
+const TPROD={geo:'geocolor',ir:'band_07',fire:'fire_temperature'};
+let engine='tiles';                      // 'tiles' | 'star' fallback
+let TILE={size:625,maxZ:4,ready:false};
+const tileCache=new Map();
+let tileQueue=[], tileActive=0;
+let tTimes=[], tTimesDeep=[];
+function sliderSat(){return PROJ.sat==='GOES18'?'goes-18':'goes-19';}
+function tprod(){return TPROD[mode]||'geocolor';}
+function stampDate(st){return st.slice(0,4)+'/'+st.slice(4,6)+'/'+st.slice(6,8);}
+function tileUrl(st,z,r,c){
+  return `${SLIDER}/data/imagery/${stampDate(st)}/${sliderSat()}---conus/${tprod()}/${st}/`+
+    `${String(z).padStart(2,'0')}/${String(r).padStart(3,'0')}_${String(c).padStart(3,'0')}.png`;
+}
+function tsToMs2(x){const s=String(x);
+  return Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12),+s.slice(12,14));}
+async function tileTimes(deep){
+  const f=deep?'latest_times_5760.json':'latest_times.json';
+  const r=await fetch(`${SLIDER}/data/json/${sliderSat()}/conus/${tprod()}/${f}`,{cache:'no-store'});
+  if(!r.ok)throw 0;
+  const j=await r.json();
+  const out=((j&&j.timestamps_int)||[]).map(x=>({stamp:String(x),t:tsToMs2(x)})).sort((a,b)=>a.t-b.t);
+  if(deep)tTimesDeep=out; else tTimes=out;
+  return out;
+}
+function tileProbe(st,z){return new Promise(res=>{const im=new Image();
+  im.onload=()=>res(im); im.onerror=()=>res(null); im.src=tileUrl(st,z,0,0);});}
+async function calibrateTiles(){
+  if(TILE.ready)return;
+  const times=await tileTimes(false);
+  if(times.length<2)throw 0;
+  const st=times[times.length-2].stamp;
+  const t0=await tileProbe(st,0);
+  if(!t0)throw 0;
+  TILE.size=t0.naturalWidth||625;
+  for(const z of [5,4,3,2]){ if(await tileProbe(st,z)){TILE.maxZ=z;break;} }
+  TILE.ready=true;
+}
+function pickZ(v){
+  const need=v.s*Math.min(devicePixelRatio||1,2.2)*0.85;
+  const z=Math.ceil(Math.log2(Math.max(1e-6,need*BASE_W/TILE.size)));
+  return Math.max(0,Math.min(TILE.maxZ,z));
+}
+function tileSpan(v,z){
+  const wt=BASE_W/Math.pow(2,z);
+  const bx0=CROP.x+(0-v.tx)/v.s, by0=CROP.y+(0-v.ty)/v.s;
+  const bx1=CROP.x+(v.W-v.tx)/v.s, by1=CROP.y+(v.H-v.ty)/v.s;
+  const n=Math.pow(2,z);
+  return {wt,
+    c0:Math.max(0,Math.floor(bx0/wt)), c1:Math.min(n-1,Math.floor(bx1/wt)),
+    r0:Math.max(0,Math.floor(by0/wt)), r1:Math.min(Math.min(n,Math.ceil(BASE_H/wt))-1,Math.floor(by1/wt))};
+}
+function tKey(st,z,r,c){return st+'/'+z+'/'+r+'_'+c;}
+function reqTile(st,z,r,c,pri){
+  const key=tKey(st,z,r,c);
+  if(tileCache.has(key))return;
+  tileCache.set(key,{ok:false});
+  tileQueue.push({key,url:tileUrl(st,z,r,c),st,pri:pri||0});
+  pumpTiles();
+}
+function pumpTiles(){
+  tileQueue.sort((a,b)=>a.pri-b.pri);
+  while(tileActive<6&&tileQueue.length){
+    const q=tileQueue.shift(); tileActive++;
+    const im=new Image(); im.decoding='async';
+    im.onload=()=>{tileActive--;
+      const e=tileCache.get(q.key); if(e){e.img=im;e.ok=true;}
+      trimTileCache();
+      if(frames[idx]&&(frames[idx].stamp===q.st||tmode==='outlook'))draw();
+      pumpTiles();};
+    im.onerror=()=>{tileActive--;const e=tileCache.get(q.key);if(e)e.err=true;pumpTiles();};
+    im.src=q.url;
+  }
+}
+function trimTileCache(){
+  if(tileCache.size<=460)return;
+  const cur=frames[idx]&&frames[idx].stamp;
+  for(const k of tileCache.keys()){
+    if(tileCache.size<=380)break;
+    if(cur&&k.indexOf(cur)===0)continue;
+    tileCache.delete(k);
+  }
+}
+function drawTileAt(e,r,c,wt,v){
+  const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((r*wt)-CROP.y)*v.s, sPx=wt*v.s;
+  const over=Math.max(0,(r+1)*wt-BASE_H), frac=1-over/wt;
+  ctx.drawImage(e.img,0,0,e.img.naturalWidth,e.img.naturalHeight*frac,x,y,sPx,sPx*frac);
+}
+function drawParent(st,z,r,c,wt,v){
+  for(let pz=z-1;pz>=Math.max(0,z-3);pz--){
+    const f=Math.pow(2,z-pz), pr=Math.floor(r/f), pc=Math.floor(c/f);
+    const e=tileCache.get(tKey(st,pz,pr,pc));
+    if(e&&e.ok){
+      const T=e.img.naturalWidth;
+      const sx=(c-pc*f)*T/f, sy=(r-pr*f)*T/f, ss=T/f;
+      const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((r*wt)-CROP.y)*v.s, sPx=wt*v.s;
+      ctx.drawImage(e.img,sx,sy,ss,ss,x,y,sPx,sPx);
+      return true;
+    }
+  }
+  return false;
+}
+function drawTiles(f,v){
+  const z=pickZ(v), sp=tileSpan(v,z);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++){
+    const e=tileCache.get(tKey(f.stamp,z,r,c));
+    if(e&&e.ok)drawTileAt(e,r,c,sp.wt,v);
+    else{ drawParent(f.stamp,z,r,c,sp.wt,v); if(!e||!e.err)reqTile(f.stamp,z,r,c,0); }
+  }
+  if(z>1){const zp=Math.max(0,z-2),spp=tileSpan(v,zp);   // keep coarse parents warm
+    for(let r=spp.r0;r<=spp.r1;r++)for(let c=spp.c0;c<=spp.c1;c++)reqTile(f.stamp,zp,r,c,2);}
+}
+function prefetchAhead(v){
+  if(!frames.length)return;
+  const z=pickZ(v), sp=tileSpan(v,z);
+  for(let k=1;k<=4;k++){
+    const f=frames[(idx+k)%frames.length];
+    for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++)reqTile(f.stamp,z,r,c,k+2);
+  }
+}
+function resetTiles(){tileCache.clear();tileQueue.length=0;}
+
 /* ---------------- imagery pipeline ---------------- */
 const PT='America/Los_Angeles';
 const fmtTime=new Intl.DateTimeFormat('en-US',{timeZone:PT,hour:'numeric',minute:'2-digit',timeZoneName:'short'});
@@ -482,7 +612,34 @@ async function preload(list,onProg){
 
 async function reload(fullVeil){
   const run=++loadRun;
-  if(fullVeil) showVeil('contacting GOES-West…');
+  if(fullVeil) showVeil('contacting satellite…');
+  if(engine!=='star'&&!TILE.ready){
+    try{ await calibrateTiles(); }
+    catch(e){ engine='star'; toast('tile server unreachable — legacy imagery mode'); }
+    if(run!==loadRun)return;
+    syncEngineUI();
+  }
+  if(engine==='tiles'){
+    try{
+      const times=await tileTimes(false);
+      if(run!==loadRun)return;
+      const list=windowed(times);
+      if(list.length<2)throw 0;
+      frames=list; idx=frames.length-1;
+      buildRuler(); syncHUD(); draw(); hideVeil();
+      holdUntil=performance.now()+600;
+    }catch(e){
+      if(run!==loadRun)return;
+      engine='star'; syncEngineUI();
+      toast('tile times unavailable — legacy imagery mode');
+      reloadStar(fullVeil,run);
+    }
+    return;
+  }
+  reloadStar(fullVeil,run);
+}
+function syncEngineUI(){$('tglHD').style.display=engine==='tiles'?'none':'grid';}
+async function reloadStar(fullVeil,run){
   try{
     if(fullVeil&&!frames.length)
       loadImg({url:baseUrl()+'2500x1500.jpg',t:Date.now(),stamp:''})
@@ -509,6 +666,22 @@ async function reload(fullVeil){
 }
 async function quietRefresh(){
   if(document.hidden||tmode!=='live')return;
+  if(engine==='tiles'){
+    try{
+      const times=await tileTimes(false);
+      if(!frames.length)return;
+      const newest=frames[frames.length-1].t;
+      const fresh=times.filter(f=>f.t>newest);
+      if(!fresh.length)return;
+      const wasLast=idx===frames.length-1;
+      frames=frames.concat(fresh);
+      const cutoff=frames[frames.length-1].t-hours*3600000;
+      while(frames.length>maxFrames()+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
+      if(wasLast)idx=frames.length-1;
+      buildRuler(); syncHUD();
+    }catch(e){}
+    return;
+  }
   try{
     const all=await listFrames();
     if(!all.length||!frames.length)return;
@@ -584,7 +757,7 @@ function hiresSize(){
 function hiresUrl(stamp,size){return `${baseUrl()}${stamp}_${PROJ.sat}-ABI-CONUS-GEOCOLOR-${size}x${size*3/5}.jpg`;}
 function scheduleHires(){clearTimeout(hiresTimer);hiresTimer=setTimeout(loadHires,420);}
 function loadHires(){
-  if(hiresDead||mode!=='geo'||playing||zoom<HIRES_MIN_ZOOM||tmode==='outlook')return;
+  if(engine==='tiles'||hiresDead||mode!=='geo'||playing||zoom<HIRES_MIN_ZOOM||tmode==='outlook')return;
   const f=frames[idx]; if(!f||!f.stamp)return;
   const size=hiresSize(), key=f.stamp+'_'+size;
   if(hires.stamp===f.stamp&&hires.size>=size)return;
@@ -783,7 +956,8 @@ function rT0(){return (replayDay||ptMidnight(Date.now()))+replayHour*3600000;}
 function buildDayChips(){
   const el=$('dayChips'); el.innerHTML='';
   const days=new Map();
-  for(const f of lastListing){const d=ptMidnight(f.t); if(!days.has(d))days.set(d,f.t);}
+  const src=engine==='tiles'?tTimesDeep:lastListing;
+  for(const f of src){const d=ptMidnight(f.t); if(!days.has(d))days.set(d,f.t);}
   const sorted=[...days.keys()].sort((a,b)=>a-b);
   if(!sorted.length)return;
   if(replayDay==null||!days.has(replayDay)) replayDay=sorted[sorted.length-1];
@@ -807,13 +981,16 @@ async function loadReplay(){
   const run=++loadRun;
   toast('loading replay…');
   try{
-    const all=lastListing.length?lastListing:await listFrames();
+    const all=engine==='tiles'
+      ?(tTimesDeep.length?tTimesDeep:await tileTimes(true))
+      :(lastListing.length?lastListing:await listFrames());
     const list=windowRange(all,rT0(),rT0()+hours*3600000);
     if(list.length<2){toast('no imagery stored for that window');return;}
-    const ok=await preload(list,()=>{});
+    const ok=engine==='tiles'?list:await preload(list,()=>{});
     if(run!==loadRun)return;
     if(ok.length<2){toast('no imagery stored for that window');return;}
     frames=ok; idx=0; hires={stamp:null,img:null}; resetOverlays();
+    // (tiles engine streams on demand; nothing to preload)
     buildRuler(); syncHUD(); draw();
     holdUntil=performance.now()+400; setPlaying(true);
   }catch(e){ if(run===loadRun)toast('couldn\u2019t load that replay window'); }
@@ -832,7 +1009,7 @@ async function setTMode(v){
   if(v==='outlook'){ enterOutlook(); return; }
   restyleMarkers();
   if(v==='replay'){
-    if(!lastListing.length){ try{await listFrames();}catch(e){} }
+    try{ if(engine==='tiles'){if(!tTimesDeep.length)await tileTimes(true);} else if(!lastListing.length)await listFrames(); }catch(e){}
     buildDayChips(); loadReplay();
   }else{ // live
     reload(false); setPlaying(!reduceMotion);
@@ -864,9 +1041,10 @@ function draw(){
   ctx.fillStyle='#0a0e13'; ctx.fillRect(0,0,v.W,v.H);
   if(tmode==='outlook'){
     const bf=frames[frames.length-1];
-    if(bf&&bf.bmp){
-      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-      ctx.drawImage(bf.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+    if(bf){
+      if(engine==='tiles'&&TILE.ready)drawTiles(bf,v);
+      else if(bf.bmp){ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+        ctx.drawImage(bf.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);}
       ctx.fillStyle='rgba(10,14,19,.5)'; ctx.fillRect(0,0,v.W,v.H);
     }
     drawBasemap(v);
@@ -874,22 +1052,29 @@ function draw(){
       if(playing||!fogCanvas||Math.abs(fogT-olT)>60000)renderFog(olT);
       if(fogCanvas)ctx.drawImage(fogCanvas,0,0,fogCanvas.width,fogCanvas.height,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
     }
+    if(layers.fire)drawFirePerims(v);
     updateMarkers(v);
     return;
   }
   const f=frames[idx];
-  if(f&&f.bmp){
-    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-    ctx.drawImage(f.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
-    if(hdPlus&&f.ov&&mode==='geo'){
-      const R=f.ov.region;
-      ctx.drawImage(f.ov.c,v.tx+R.x*v.s,v.ty+R.y*v.s,R.w*v.s,R.h*v.s);
-    }
-    if(!playing&&hires.img&&f.stamp&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM){
-      const hs=hires.img.naturalWidth/BASE_W;
-      ctx.drawImage(hires.img,CROP.x*hs,CROP.y*hs,CROP.w*hs,CROP.h*hs,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+  if(f){
+    if(engine==='tiles'&&TILE.ready){
+      drawTiles(f,v);
+      prefetchAhead(v);
+    }else if(f.bmp){
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(f.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+      if(hdPlus&&f.ov&&mode==='geo'){
+        const R=f.ov.region;
+        ctx.drawImage(f.ov.c,v.tx+R.x*v.s,v.ty+R.y*v.s,R.w*v.s,R.h*v.s);
+      }
+      if(!playing&&hires.img&&f.stamp&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM){
+        const hs=hires.img.naturalWidth/BASE_W;
+        ctx.drawImage(hires.img,CROP.x*hs,CROP.y*hs,CROP.w*hs,CROP.h*hs,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+      }
     }
   }
+  if(layers.fire)drawFirePerims(v);
   updateMarkers(v);
 }
 function zoomAt(px,py,target){
@@ -1136,7 +1321,7 @@ function updateMarkers(v){
   v=v||view();
   const showApt=layers.apt, showCam=layers.cam, showLbl=tmode==='outlook'||v.s>=0.85;
   for(const m of mkIndex){
-    const on=m.type==='apt'?showApt:showCam;
+    const on=m.type==='apt'?showApt:m.type==='fire'?layers.fire:showCam;
     const sx=m.u*v.s+v.tx, sy=m.v*v.s+v.ty;
     const vis=on&&sx>-60&&sx<v.W+60&&sy>-40&&sy<v.H+40;
     m.el.style.display=vis?'flex':'none';
@@ -1145,6 +1330,79 @@ function updateMarkers(v){
     if(m.type==='apt'){const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
   }
   $('legend').style.display=(layers.apt||layers.cam)?'block':'none';
+}
+
+/* ---------------- wildfires (NIFC WFIGS) ---------------- */
+const WFIGS='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services';
+let fires=[], firePerimGeo=null, firePerimPath=null, fireFetched=0, fireLoading=false;
+function regionBBox(){
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const [la,lo] of PROJ.corners){x0=Math.min(x0,lo);x1=Math.max(x1,lo);y0=Math.min(y0,la);y1=Math.max(y1,la);}
+  return {x0,y0,x1,y1};
+}
+async function fetchFires(){
+  if(fireLoading)return;
+  if(fires.length&&Date.now()-fireFetched<10*60*1000)return;
+  fireLoading=true;
+  try{
+    const bb=regionBBox();
+    const geoQ=`geometry=${bb.x0},${bb.y0},${bb.x1},${bb.y1}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outSR=4326&f=geojson`;
+    const r=await fetch(`${WFIGS}/WFIGS_Incident_Locations_Current/FeatureServer/0/query?where=1%3D1&outFields=IncidentName,IncidentSize,DailyAcres,PercentContained,FireDiscoveryDateTime,IncidentTypeCategory,POOState&resultRecordCount=1000&${geoQ}`,{cache:'no-store'});
+    const j=await r.json();
+    const list=(j.features||[]).map(ft=>{
+      const pr=ft.properties||{}, g=ft.geometry||{}, cc=g.coordinates||[];
+      return {n:pr.IncidentName||'Fire', lat:+cc[1], lon:+cc[0],
+        acres:+(pr.DailyAcres||pr.IncidentSize||0)||0,
+        pct:pr.PercentContained, disc:pr.FireDiscoveryDateTime,
+        typ:pr.IncidentTypeCategory, st:pr.POOState||''};
+    }).filter(f=>isFinite(f.lat)&&isFinite(f.lon)&&f.typ!=='RX');
+    rebuildFireMarkers(list);
+    fires=list; fireFetched=Date.now();
+    fetch(`${WFIGS}/WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?where=1%3D1&outFields=attr_IncidentName&resultRecordCount=500&maxAllowableOffset=0.008&geometryPrecision=3&${geoQ}`,{cache:'no-store'})
+      .then(r2=>r2.json()).then(j2=>{firePerimGeo=(j2&&j2.features)||[];firePerimPath=null;draw();})
+      .catch(()=>{});
+  }catch(e){toast('fire data unreachable right now');}
+  fireLoading=false;
+}
+const fireSvg='<svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.6.6c.3 2.3-.7 3.6-1.9 4.9C5.4 6.9 4 8.4 4 10.6 4 13.6 6.2 15.5 8 15.5s4-1.6 4-4.6c0-1.2-.4-2.3-1-3.2-.3 1-.8 1.6-1.5 2 .3-2.4-.4-5.6-.9-9.1z"/></svg>';
+function rebuildFireMarkers(list){
+  for(let i=mkIndex.length-1;i>=0;i--){
+    if(mkIndex[i].type==='fire'){mkIndex[i].el.remove();mkIndex.splice(i,1);}
+  }
+  for(const f of list){
+    const [u,v]=llToWorld(f.lat,f.lon);
+    const el=document.createElement('button');
+    const big=f.acres>=10000?18:f.acres>=1000?15:12;
+    el.className='mk fire'; el.innerHTML=fireSvg; el.title=f.n;
+    el.querySelector('svg').style.width=big+'px'; el.querySelector('svg').style.height=big+'px';
+    el.querySelector('svg').style.color=(f.pct!=null&&f.pct>=80)?'#ffa32e':'#ff5c39';
+    el.addEventListener('pointerdown',e=>e.stopPropagation());
+    el.addEventListener('click',()=>openCard('fire',f));
+    lyr.appendChild(el);
+    mkIndex.push({el,u,v,type:'fire',ref:f});
+    f._mk=el;
+  }
+  updateMarkers();
+}
+function drawFirePerims(v){
+  if(!firePerimGeo||!firePerimGeo.length)return;
+  if(!firePerimPath){
+    firePerimPath=new Path2D();
+    for(const ft of firePerimGeo){
+      const g=ft.geometry; if(!g)continue;
+      const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+      for(const poly of polys)for(const ring of poly){
+        ring.forEach((pt,i)=>{const [u,vv]=llToWorld(pt[1],pt[0]);
+          i?firePerimPath.lineTo(u,vv):firePerimPath.moveTo(u,vv);});
+        firePerimPath.closePath();
+      }
+    }
+  }
+  ctx.save();
+  ctx.translate(v.tx,v.ty); ctx.scale(v.s,v.s);
+  ctx.fillStyle='rgba(255,92,57,.13)'; ctx.fill(firePerimPath);
+  ctx.strokeStyle='rgba(255,92,57,.85)'; ctx.lineWidth=1.3/v.s; ctx.stroke(firePerimPath);
+  ctx.restore();
 }
 
 /* ---------------- NWS observations ---------------- */
@@ -1212,6 +1470,17 @@ function renderCard(){
         <span>dew pt <b>${o.dC!=null?Math.round(o.dC*9/5+32)+'°F':'—'}</b></span>
       </div>
       <div class="foot"><span>${age!=null?'observed '+age+' min ago':''}</span><span></span></div>`:''}`;
+  }else if(openMk.type==='fire'){
+    const f=openMk.ref;
+    const acres=f.acres>=1000?Math.round(f.acres).toLocaleString():f.acres.toFixed(f.acres<10?1:0);
+    const disc=f.disc?new Date(f.disc).toLocaleDateString('en-US',{timeZone:PT,month:'short',day:'numeric'}):null;
+    B.innerHTML=`<h3>${esc(f.n)} Fire</h3><div class="sub">NIFC / WFIGS · ${esc(f.st)}</div>
+      <div class="big"><i style="background:${(f.pct!=null&&f.pct>=80)?'var(--v1)':'var(--v0)'}"></i>${acres} acres</div>
+      <div class="grid">
+        <span>contained <b>${f.pct!=null?Math.round(f.pct)+'%':'—'}</b></span>
+        <span>discovered <b>${disc||'—'}</b></span>
+      </div>
+      <div class="foot"><span>official interagency incident data</span><span></span></div>`;
   }else{
     const c=openMk.ref, o=c.apt&&obs[c.apt.id];
     const cls=visClass(o&&o.ok?o.vis:null);
@@ -1251,6 +1520,7 @@ async function switchRegion(v){
     $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='live'));
   }
   region=v; PROJ=REGIONS[v];
+  TILE.ready=false; tTimes=[]; tTimesDeep=[]; resetTiles(); firePerimPath=null;
   computeCrop(); recomputePositions(); bmPaths=null; fogCanvas=null; fogT=-1;
   hires={stamp:null,img:null}; hiresCache.clear(); hiresDead=false;
   lastListing=[]; replayDay=null; frames=[]; idx=0;
@@ -1262,14 +1532,33 @@ $('hourSel').addEventListener('input',()=>{replayHour=+$('hourSel').value;syncRe
 $('hourSel').addEventListener('change',()=>{replayHour=+$('hourSel').value;loadReplay();});
 setInterval(()=>{if(tmode==='outlook'&&!document.hidden)fetchTafs().then(()=>{restyleMarkers();syncHUD();});},WX_REFRESH);
 segWire($('segSpeed'),'s',v=>{speed=+v;});
-segWire($('segMode'),'m',v=>{const prev=mode;mode=v;hires={stamp:null,img:null};hiresCache.clear();reloadMode(prev);});
+segWire($('segMode'),'m',v=>{
+  const prev=mode; mode=v;
+  $('brandA').textContent=v==='fire'?'fire':'fog';
+  hires={stamp:null,img:null};hiresCache.clear();
+  if(engine==='tiles'){
+    if(v==='fire'&&!layers.fire){layers.fire=true;$('tglFire').setAttribute('aria-pressed','true');fetchFires();}
+    resetTiles(); reloadMode(prev);
+  }else{
+    if(v==='fire'){mode=prev;$('brandA').textContent=prev==='fire'?'fire':'fog';
+      $('segMode').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));
+      toast('Fire imagery needs the tile engine (currently in legacy mode)');return;}
+    reloadMode(prev);
+  }});
 async function reloadMode(prev){
   toast(`loading ${PRODUCTS[mode].label}…`);
   const keep=frames,keepIdx=idx,run=++loadRun;
   try{
-    const all=await listFrames();
-    const list=tmode==='replay'?windowRange(all,rT0(),rT0()+hours*3600000):windowed(all);
-    const ok=await preload(list,()=>{});
+    let ok;
+    if(engine==='tiles'){
+      tTimesDeep=[];
+      const all=tmode==='replay'?await tileTimes(true):await tileTimes(false);
+      ok=tmode==='replay'?windowRange(all,rT0(),rT0()+hours*3600000):windowed(all);
+    }else{
+      const all=await listFrames();
+      const list=tmode==='replay'?windowRange(all,rT0(),rT0()+hours*3600000):windowed(all);
+      ok=await preload(list,()=>{});
+    }
     if(run!==loadRun)return;
     if(ok.length<2)throw new Error('empty');
     frames=ok; idx=frames.length-1; resetOverlays();
@@ -1284,6 +1573,9 @@ async function reloadMode(prev){
 function wireToggle(btn,key){btn.onclick=()=>{layers[key]=!layers[key];
   btn.setAttribute('aria-pressed',layers[key]);updateMarkers();wake();};}
 wireToggle($('tglApt'),'apt'); wireToggle($('tglCam'),'cam');
+wireToggle($('tglFire'),'fire');
+$('tglFire').addEventListener('click',()=>{if(layers.fire)fetchFires();draw();});
+setInterval(()=>{if(layers.fire&&!document.hidden)fetchFires();},10*60*1000);
 $('tglHD').onclick=()=>{
   if(!hd&&!hdPlus){hd=true;toast('HD loop: 1 km frames everywhere \u2014 heavier data');}
   else if(hd&&!hdPlus){
