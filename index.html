@@ -232,7 +232,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
     <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
-    <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
+    <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans, ODOT TripCheck, and ridge-top sky cams from <a href="https://alertcalifornia.org/" target="_blank" rel="noopener">ALERTCalifornia | UC San Diego</a> via ALERTWest (many PG&amp;E-sponsored) — mountaintop views that show the fog deck from above. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
 </div>
 
@@ -342,6 +342,50 @@ const AIRPORTS=[
  {id:'KAVX',n:'Catalina Island, CA',lat:33.4049,lon:-118.4158},
  {id:'KCRQ',n:'Carlsbad, CA',lat:33.1283,lon:-117.2800},
  {id:'KSAN',n:'San Diego, CA',lat:32.7336,lon:-117.1897},
+ /* inland — Central Valley (tule fog country) */
+ {id:'KRDD',n:'Redding, CA',lat:40.5090,lon:-122.2934},
+ {id:'KRBL',n:'Red Bluff, CA',lat:40.1507,lon:-122.2536},
+ {id:'KCIC',n:'Chico, CA',lat:39.7954,lon:-121.8585},
+ {id:'KMYV',n:'Marysville, CA',lat:39.0978,lon:-121.5697},
+ {id:'KSMF',n:'Sacramento Intl, CA',lat:38.6954,lon:-121.5908},
+ {id:'KSCK',n:'Stockton, CA',lat:37.8942,lon:-121.2383},
+ {id:'KMOD',n:'Modesto, CA',lat:37.6258,lon:-120.9544},
+ {id:'KMCE',n:'Merced, CA',lat:37.2847,lon:-120.5139},
+ {id:'KFAT',n:'Fresno, CA',lat:36.7762,lon:-119.7181},
+ {id:'KVIS',n:'Visalia, CA',lat:36.3187,lon:-119.3929},
+ {id:'KBFL',n:'Bakersfield, CA',lat:35.4336,lon:-119.0568},
+ /* inland — NorCal & Bay */
+ {id:'KUKI',n:'Ukiah, CA',lat:39.1259,lon:-123.2009},
+ {id:'KSTS',n:'Santa Rosa, CA',lat:38.5090,lon:-122.8127},
+ {id:'KAPC',n:'Napa, CA',lat:38.2132,lon:-122.2807},
+ {id:'KCCR',n:'Concord, CA',lat:37.9897,lon:-122.0569},
+ {id:'KLVK',n:'Livermore, CA',lat:37.6934,lon:-121.8203},
+ {id:'KSJC',n:'San Jose, CA',lat:37.3626,lon:-121.9290},
+ {id:'KSNS',n:'Salinas, CA',lat:36.6628,lon:-121.6064},
+ {id:'KPRB',n:'Paso Robles, CA',lat:35.6729,lon:-120.6270},
+ /* inland — SoCal & Sierra */
+ {id:'KBUR',n:'Burbank, CA',lat:34.2007,lon:-118.3585},
+ {id:'KONT',n:'Ontario, CA',lat:34.0560,lon:-117.6012},
+ {id:'KPSP',n:'Palm Springs, CA',lat:33.8297,lon:-116.5067},
+ {id:'KTRK',n:'Truckee, CA',lat:39.3200,lon:-120.1396},
+ {id:'KTVL',n:'South Lake Tahoe, CA',lat:38.8939,lon:-119.9954},
+ {id:'KMMH',n:'Mammoth Lakes, CA',lat:37.6241,lon:-118.8378},
+ /* inland — Oregon */
+ {id:'KMFR',n:'Medford, OR',lat:42.3742,lon:-122.8735},
+ {id:'KRBG',n:'Roseburg, OR',lat:43.2388,lon:-123.3559},
+ {id:'KEUG',n:'Eugene, OR',lat:44.1246,lon:-123.2120},
+ {id:'KSLE',n:'Salem, OR',lat:44.9095,lon:-123.0026},
+ {id:'KPDX',n:'Portland, OR',lat:45.5887,lon:-122.5975},
+ {id:'KRDM',n:'Redmond–Bend, OR',lat:44.2541,lon:-121.1500},
+ {id:'KLMT',n:'Klamath Falls, OR',lat:42.1561,lon:-121.7333},
+ /* inland — Washington & Great Basin */
+ {id:'KOLM',n:'Olympia, WA',lat:46.9694,lon:-122.9027},
+ {id:'KBLI',n:'Bellingham, WA',lat:48.7928,lon:-122.5375},
+ {id:'KYKM',n:'Yakima, WA',lat:46.5682,lon:-120.5440},
+ {id:'KPSC',n:'Pasco, WA',lat:46.2647,lon:-119.1190},
+ {id:'KGEG',n:'Spokane, WA',lat:47.6199,lon:-117.5337},
+ {id:'KRNO',n:'Reno, NV',lat:39.4991,lon:-119.7681},
+ {id:'KLAS',n:'Las Vegas, NV',lat:36.0801,lon:-115.1522},
 ];
 
 /* ---------------- data: webcams ---------------- */
@@ -1486,7 +1530,8 @@ function restyleMarkers(){
 }
 function updateMarkers(v){
   v=v||view();
-  const showApt=layers.apt, showCam=layers.cam, showLbl=tmode==='outlook'||v.s>=0.85;
+  const showApt=layers.apt, showCam=layers.cam,
+        showLbl=tmode==='outlook'?v.s>=1.05:v.s>=1.6;
   for(const m of mkIndex){
     const on=m.type==='apt'?showApt:m.type==='fire'?layers.fire:showCam;
     const sx=m.u*v.s+v.tx, sy=m.v*v.s+v.ty;
@@ -1615,6 +1660,63 @@ function drawFirePerims(v){
   ctx.fillStyle='rgba(255,92,57,.13)'; ctx.fill(firePerimPath);
   ctx.strokeStyle='rgba(255,92,57,.85)'; ctx.lineWidth=1.3/v.s; ctx.stroke(firePerimPath);
   ctx.restore();
+}
+
+/* ---------------- sky cams (ALERTWest · ALERTCalifornia / PG&E) ---------------- */
+const AW_HOSTS=['https://data.alertwest.org','https://sapi.prod.alertwest.com','https://api.alertwest.org'];
+const AW_IMG='https://img.cdn.prod.alertwest.com/data/img';
+let alertCams=[], awFetched=0, awLoading=false, awDead=false;
+function thinPts(list,cell,cap){
+  const seen=new Set(),out=[];
+  for(const c of list){
+    const k=Math.round(c.lat*cell)+':'+Math.round(c.lon*cell);
+    if(seen.has(k))continue;
+    seen.add(k);out.push(c);
+    if(out.length>=cap)break;
+  }
+  return out;
+}
+async function loadAlertWest(){
+  if(awLoading||awDead)return;
+  if(alertCams.length&&Date.now()-awFetched<10*60*1000)return;
+  awLoading=true;
+  let got=null;
+  for(const h of AW_HOSTS){
+    try{
+      const r=await fetch(h+'/api/getCameraDataByLoc',{cache:'no-store'});
+      if(!r.ok)continue;
+      const j=await r.json();
+      if(j&&j.data&&j.data.cams&&j.data.locs){got=j.data;break;}
+    }catch(e){}
+  }
+  awLoading=false;
+  if(!got){
+    if(!alertCams.length){awDead=true;toast('sky-cam directory unreachable');}
+    return;
+  }
+  const locs=new Map((got.locs.data||[]).map(L=>[L.id,L]));
+  const p2=n=>String(n).padStart(2,'0');
+  const out=[];
+  for(const c of (got.cams.data||[])){
+    if(+c.pv||+c.off)continue;
+    const L=locs.get(c.lid);
+    if(!L||+L.lp)continue;
+    const lat=+L.lat,lon=+L.lon;
+    if(!isFinite(lat)||!isFinite(lon)||lat<31||lat>49.6||lon<-125.8||lon>-113)continue;
+    const m=/_(\d{10})_/.exec(c.img||'');
+    if(!m)continue;
+    const d=new Date(+m[1]*1000);
+    out.push({n:String(c.cn||'sky cam').replace(/_/g,' '),lat,lon,sky:true,
+      img:`${AW_IMG}/${c.id}/${d.getUTCFullYear()}/${p2(d.getUTCMonth()+1)}/${p2(d.getUTCDate())}/${c.img}`,
+      src:(c.sp?c.sp+' · ':'')+'ALERTCalifornia / ALERTWest'});
+  }
+  const thin=thinPts(out.sort((a,b)=>b.lat-a.lat),5,150);
+  for(let i=mkIndex.length-1;i>=0;i--){
+    if(mkIndex[i].type==='cam'&&mkIndex[i].ref.sky){mkIndex[i].el.remove();mkIndex.splice(i,1);}
+  }
+  cams=cams.filter(c=>!c.sky).concat(thin);
+  alertCams=thin; awFetched=Date.now();
+  addCamMarkers(thin);
 }
 
 /* ---------------- NWS observations ---------------- */
@@ -1872,7 +1974,9 @@ refreshObs();
     if(ct.length){cams=cams.concat(ct);addCamMarkers(ct);}
     else toast('Caltrans camera directory unreachable — Oregon cams still on');
   }catch(e){toast('Caltrans camera directory unreachable — Oregon cams still on');}
+  loadAlertWest();
 })();
+setInterval(()=>{if(layers.cam&&!document.hidden)loadAlertWest();},10*60*1000);
 setInterval(quietRefresh,IMG_REFRESH);
 setInterval(refreshObs,WX_REFRESH);
 requestAnimationFrame(tick);
