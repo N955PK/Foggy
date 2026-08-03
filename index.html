@@ -413,30 +413,90 @@ async function loadCaltrans(){
 }
 
 /* ---------------- tiled imagery engine (CIRA SLIDER) ---------------- */
-const SLIDER='https://rammb-slider.cira.colostate.edu';
+const SLIDER_HOSTS=['https://rammb-slider.cira.colostate.edu','https://slider.cira.colostate.edu'];
+let sliderHost=SLIDER_HOSTS[0];
 const TPROD={geo:'geocolor',ir:'band_07',fire:'fire_temperature'};
 let engine='tiles';                      // 'tiles' | 'star' fallback
 let TILE={size:625,maxZ:4,ready:false};
 const tileCache=new Map();
 let tileQueue=[], tileActive=0;
-let tTimes=[], tTimesDeep=[];
+let tTimes=[], tTimesDeep=[], timesMode='json', scanSS=null;
 function sliderSat(){return PROJ.sat==='GOES18'?'goes-18':'goes-19';}
 function tprod(){return TPROD[mode]||'geocolor';}
 function stampDate(st){return st.slice(0,4)+'/'+st.slice(4,6)+'/'+st.slice(6,8);}
 function tileUrl(st,z,r,c){
-  return `${SLIDER}/data/imagery/${stampDate(st)}/${sliderSat()}---conus/${tprod()}/${st}/`+
+  return `${sliderHost}/data/imagery/${stampDate(st)}/${sliderSat()}---conus/${tprod()}/${st}/`+
     `${String(z).padStart(2,'0')}/${String(r).padStart(3,'0')}_${String(c).padStart(3,'0')}.png`;
 }
 function tsToMs2(x){const s=String(x);
   return Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12),+s.slice(12,14));}
-async function tileTimes(deep){
-  const f=deep?'latest_times_5760.json':'latest_times.json';
-  const r=await fetch(`${SLIDER}/data/json/${sliderSat()}/conus/${tprod()}/${f}`,{cache:'no-store'});
-  if(!r.ok)throw 0;
-  const j=await r.json();
-  const out=((j&&j.timestamps_int)||[]).map(x=>({stamp:String(x),t:tsToMs2(x)})).sort((a,b)=>a.t-b.t);
+function stampFor(ms,ss){const d=new Date(ms);const p=(n,w)=>String(n).padStart(w,'0');
+  return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1,2)+p(d.getUTCDate(),2)+p(d.getUTCHours(),2)+p(d.getUTCMinutes(),2)+p(ss,2);}
+function recentScanMinute(k){
+  let t=Date.now()-6*60000; t-=t%60000;
+  while((Math.floor(t/60000)%5)!==1)t-=60000;
+  return t-k*5*60000;
+}
+function ssCacheKey(){return 'fw_ss_'+sliderSat();}
+async function discoverSeconds(){
+  if(scanSS!=null)return scanSS;
+  try{const c=JSON.parse(localStorage.getItem(ssCacheKey())||'null');
+    if(c&&Date.now()-c.at<36*3600000){scanSS=c.ss;return scanSS;}}catch(e){}
+  for(let k=0;k<3;k++){
+    const base=recentScanMinute(k);
+    const found=await new Promise(res=>{
+      let done=false,pending=60;
+      for(let ss=0;ss<60;ss++){
+        const im=new Image();
+        im.onload=()=>{if(!done){done=true;res(ss);}};
+        im.onerror=()=>{if(--pending===0&&!done)res(null);};
+        im.src=tileUrl(stampFor(base,ss),0,0,0);
+      }
+      setTimeout(()=>{if(!done)res(null);},9000);
+    });
+    if(found!=null){
+      scanSS=found;
+      try{localStorage.setItem(ssCacheKey(),JSON.stringify({ss:found,at:Date.now()}));}catch(e){}
+      return found;
+    }
+  }
+  throw 0;
+}
+function synthTileTimes(deep){
+  const ss=scanSS==null?0:scanSS;
+  const n=deep?14*288:(8*12+10);
+  const out=[];
+  let t=recentScanMinute(0);
+  for(let i=0;i<n;i++,t-=5*60000)out.push({stamp:stampFor(t,ss),t});
+  out.reverse();
   if(deep)tTimesDeep=out; else tTimes=out;
   return out;
+}
+async function tileTimesJson(deep){
+  const f=deep?'latest_times_5760.json':'latest_times.json';
+  let lastErr=0;
+  for(const host of SLIDER_HOSTS){
+    try{
+      const r=await fetch(`${host}/data/json/${sliderSat()}/conus/${tprod()}/${f}`,{cache:'no-store'});
+      if(!r.ok){lastErr=r.status;continue;}
+      const j=await r.json();
+      const out=((j&&j.timestamps_int)||[]).map(x=>({stamp:String(x),t:tsToMs2(x)})).sort((a,b)=>a.t-b.t);
+      if(!out.length)continue;
+      sliderHost=host; timesMode='json';
+      if(scanSS==null)scanSS=+out[out.length-1].stamp.slice(12,14);
+      if(deep)tTimesDeep=out; else tTimes=out;
+      return out;
+    }catch(e){}
+  }
+  throw lastErr||0;
+}
+async function tileTimes(deep){
+  try{ return await tileTimesJson(deep); }
+  catch(e){
+    await discoverSeconds();      // CORS-free path: probe the scan clock
+    timesMode='synth';
+    return synthTileTimes(deep);
+  }
 }
 function tileProbe(st,z){return new Promise(res=>{const im=new Image();
   im.onload=()=>res(im); im.onerror=()=>res(null); im.src=tileUrl(st,z,0,0);});}
@@ -615,7 +675,7 @@ async function reload(fullVeil){
   if(fullVeil) showVeil('contacting satellite…');
   if(engine!=='star'&&!TILE.ready){
     try{ await calibrateTiles(); }
-    catch(e){ engine='star'; toast('tile server unreachable — legacy imagery mode'); }
+    catch(e){ engine='star'; toast('tile server fully unreachable — legacy imagery mode'); }
     if(run!==loadRun)return;
     syncEngineUI();
   }
@@ -986,6 +1046,11 @@ async function loadReplay(){
       :(lastListing.length?lastListing:await listFrames());
     const list=windowRange(all,rT0(),rT0()+hours*3600000);
     if(list.length<2){toast('no imagery stored for that window');return;}
+    if(engine==='tiles'&&timesMode==='synth'){
+      const probeOk=await tileProbe(list[0].stamp,0);
+      if(run!==loadRun)return;
+      if(!probeOk){toast('that window is beyond the tile archive');return;}
+    }
     const ok=engine==='tiles'?list:await preload(list,()=>{});
     if(run!==loadRun)return;
     if(ok.length<2){toast('no imagery stored for that window');return;}
@@ -1520,7 +1585,7 @@ async function switchRegion(v){
     $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='live'));
   }
   region=v; PROJ=REGIONS[v];
-  TILE.ready=false; tTimes=[]; tTimesDeep=[]; resetTiles(); firePerimPath=null;
+  TILE.ready=false; tTimes=[]; tTimesDeep=[]; scanSS=null; timesMode='json'; resetTiles(); firePerimPath=null;
   computeCrop(); recomputePositions(); bmPaths=null; fogCanvas=null; fogT=-1;
   hires={stamp:null,img:null}; hiresCache.clear(); hiresDead=false;
   lastListing=[]; replayDay=null; frames=[]; idx=0;
