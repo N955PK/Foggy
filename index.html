@@ -187,6 +187,8 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <span class="dock-label">SAT</span>
       <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
       <button class="icon-btn" id="tglHD" aria-pressed="false" title="1 km HD loop — heavier data" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.05em">HD</button>
+      <button class="icon-btn" id="tglLines" aria-pressed="true" aria-label="State and coast lines" title="Boundaries">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 3.5l4-1.6 5 1.6 4-1.6v10.6l-4 1.6-5-1.6-4 1.6zM5.5 1.9v10.6M10.5 3.5v10.6"/></svg></button>
       <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
         <svg viewBox="0 0 16 16"><path d="M15 9.5v-1.6L9.6 5.6V1.9C9.6 1.1 9 .4 8 .4s-1.6.7-1.6 1.5v3.7L1 7.9v1.6l5.4-1.5v3.6L4.6 13v1.2L8 13.2l3.4 1V13l-1.8-1.4V8z"/></svg></button>
       <button class="icon-btn" id="tglFire" aria-pressed="false" aria-label="Wildfire layer" title="Wildfires">
@@ -225,7 +227,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
     <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
     <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
-    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
+    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
@@ -271,7 +273,7 @@ let zoom=1, panX=0, panY=0;
 let homeZ=1, homeX=0, homeY=0, atHome=true;
 let holdUntil=0, acc=0, lastTick=performance.now();
 let loadRun=0;
-let layers={apt:false,cam:false,fire:false};
+let layers={apt:false,cam:false,fire:false,lines:true};
 let hires={stamp:null,img:null}, hiresCache=new Map(), hiresDead=false, hiresTimer=null;
 let obs={};
 let cams=[];
@@ -538,8 +540,13 @@ function tileSpan(v,z){
 function tKey(st,z,r,c){return st+'/'+z+'/'+r+'_'+c;}
 function reqTile(st,z,r,c,pri){
   const key=tKey(st,z,r,c);
-  if(tileCache.has(key))return;
-  tileCache.set(key,{ok:false});
+  const e=tileCache.get(key);
+  if(e){
+    if(e.ok||e.pending)return;
+    if(e.err&&Date.now()-(e.at||0)<45000)return;   // retry failed tiles after 45 s
+    tileCache.delete(key);
+  }
+  tileCache.set(key,{ok:false,pending:true});
   tileQueue.push({key,url:tileUrl(st,z,r,c),st,pri:pri||0});
   pumpTiles();
 }
@@ -549,11 +556,11 @@ function pumpTiles(){
     const q=tileQueue.shift(); tileActive++;
     const im=new Image(); im.decoding='async';
     im.onload=()=>{tileActive--;
-      const e=tileCache.get(q.key); if(e){e.img=im;e.ok=true;}
+      const e=tileCache.get(q.key); if(e){e.img=im;e.ok=true;e.pending=false;}
       trimTileCache();
       if(frames[idx]&&(frames[idx].stamp===q.st||tmode==='outlook'))scheduleDraw();
       pumpTiles();};
-    im.onerror=()=>{tileActive--;const e=tileCache.get(q.key);if(e)e.err=true;pumpTiles();};
+    im.onerror=()=>{tileActive--;const e=tileCache.get(q.key);if(e){e.err=true;e.pending=false;e.at=Date.now();}pumpTiles();};
     im.src=q.url;
   }
 }
@@ -605,7 +612,7 @@ function drawTiles(f,v){
   for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++){
     const e=tileCache.get(tKey(f.stamp,z,r,c));
     if(e&&e.ok)drawTileAt(e,r,c,sp.wt,sp.PADY,v);
-    else{ drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v); if(!e||!e.err)reqTile(f.stamp,z,r,c,0); }
+    else{ drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v); reqTile(f.stamp,z,r,c,0); }
   }
   if(z>1){const zp=Math.max(0,z-2),spp=tileSpan(v,zp);   // keep coarse parents warm
     for(let r=spp.r0;r<=spp.r1;r++)for(let c=spp.c0;c<=spp.c1;c++)reqTile(f.stamp,zp,r,c,2);}
@@ -619,6 +626,11 @@ function prefetchAhead(v){
   }
 }
 function resetTiles(){tileCache.clear();tileQueue.length=0;}
+function warmLoopBase(){
+  if(engine!=='tiles')return;
+  for(const f of frames)
+    for(let r=0;r<2;r++)for(let c=0;c<2;c++)reqTile(f.stamp,1,r,c,6);
+}
 let drawQueued=false;
 function scheduleDraw(){
   if(drawQueued)return; drawQueued=true;
@@ -715,6 +727,7 @@ async function reload(fullVeil){
       const list=windowed(times);
       if(list.length<2)throw 0;
       frames=list; idx=frames.length-1;
+      warmLoopBase();
       buildRuler(); syncHUD(); draw(); hideVeil();
       holdUntil=performance.now()+600;
     }catch(e){
@@ -767,6 +780,7 @@ async function quietRefresh(){
       const cutoff=frames[frames.length-1].t-hours*3600000;
       while(frames.length>maxFrames()+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
       if(wasLast)idx=frames.length-1;
+      warmLoopBase();
       buildRuler(); syncHUD();
     }catch(e){}
     return;
@@ -1084,7 +1098,7 @@ async function loadReplay(){
     if(run!==loadRun)return;
     if(ok.length<2){toast('no imagery stored for that window');return;}
     frames=ok; idx=0; hires={stamp:null,img:null}; resetOverlays();
-    // (tiles engine streams on demand; nothing to preload)
+    warmLoopBase();
     buildRuler(); syncHUD(); draw();
     holdUntil=performance.now()+400; setPlaying(true);
   }catch(e){ if(run===loadRun)toast('couldn\u2019t load that replay window'); }
@@ -1146,6 +1160,7 @@ function draw(){
       if(playing||!fogCanvas||Math.abs(fogT-olT)>60000)renderFog(olT);
       if(fogCanvas)ctx.drawImage(fogCanvas,0,0,fogCanvas.width,fogCanvas.height,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
     }
+    if(layers.lines)drawStates(v);
     if(layers.fire)drawFirePerims(v);
     updateMarkers(v);
     return;
@@ -1168,6 +1183,7 @@ function draw(){
       }
     }
   }
+  if(layers.lines)drawStates(v);
   if(layers.fire)drawFirePerims(v);
   updateMarkers(v);
 }
@@ -1427,6 +1443,51 @@ function updateMarkers(v){
   $('legend').style.display=(layers.apt||layers.cam)?'block':'none';
 }
 
+/* ---------------- state & coast lines ---------------- */
+const STATES_URLS=[
+ 'https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json',
+ 'https://eric.clst.org/assets/wiki/uploads/Stuff/gz_2010_us_040_00_20m.json'
+];
+let statesGeo=null, statesPath=null, statesLoading=false;
+async function fetchStates(){
+  if(statesGeo||statesLoading)return;
+  statesLoading=true;
+  for(const u of STATES_URLS){
+    try{
+      const r=await fetch(u,{cache:'force-cache'});
+      if(!r.ok)continue;
+      const j=await r.json();
+      if(j&&Array.isArray(j.features)&&j.features.length>10){statesGeo=j.features;break;}
+    }catch(e){}
+  }
+  statesLoading=false;
+  if(statesGeo){statesPath=null;draw();}
+}
+function buildStatesPath(){
+  statesPath=new Path2D();
+  for(const ft of statesGeo){
+    const g=ft.geometry; if(!g)continue;
+    const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+    for(const poly of polys)for(const ring of poly){
+      for(let i=0;i<ring.length;i++){
+        const [u,vv]=llToWorld(ring[i][1],ring[i][0]);
+        i?statesPath.lineTo(u,vv):statesPath.moveTo(u,vv);
+      }
+      statesPath.closePath();
+    }
+  }
+}
+function drawStates(v){
+  if(!statesGeo){fetchStates();return;}
+  if(!statesPath)buildStatesPath();
+  ctx.save();
+  ctx.translate(v.tx,v.ty); ctx.scale(v.s,v.s);
+  ctx.lineJoin='round';
+  ctx.strokeStyle='rgba(10,14,19,.45)'; ctx.lineWidth=2.4/v.s; ctx.stroke(statesPath);
+  ctx.strokeStyle='rgba(233,237,241,.42)'; ctx.lineWidth=1/v.s; ctx.stroke(statesPath);
+  ctx.restore();
+}
+
 /* ---------------- wildfires (NIFC WFIGS) ---------------- */
 const WFIGS='https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services';
 let fires=[], firePerimGeo=null, firePerimPath=null, fireFetched=0, fireLoading=false;
@@ -1634,7 +1695,7 @@ async function switchRegion(v){
     $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='live'));
   }
   region=v; PROJ=REGIONS[v];
-  TILE.ready=false; tTimes=[]; tTimesDeep=[]; scanSS=null; timesMode='json'; resetTiles(); firePerimPath=null;
+  TILE.ready=false; tTimes=[]; tTimesDeep=[]; scanSS=null; timesMode='json'; resetTiles(); firePerimPath=null; statesPath=null;
   computeCrop(); recomputePositions(); bmPaths=null; fogCanvas=null; fogT=-1;
   hires={stamp:null,img:null}; hiresCache.clear(); hiresDead=false;
   lastListing=[]; replayDay=null; frames=[]; idx=0;
@@ -1676,6 +1737,7 @@ async function reloadMode(prev){
     if(run!==loadRun)return;
     if(ok.length<2)throw new Error('empty');
     frames=ok; idx=frames.length-1; resetOverlays();
+    warmLoopBase();
     buildRuler(); syncHUD(); draw();
   }catch(e){
     if(run!==loadRun)return;
@@ -1686,6 +1748,8 @@ async function reloadMode(prev){
 }
 function wireToggle(btn,key){btn.onclick=()=>{layers[key]=!layers[key];
   btn.setAttribute('aria-pressed',layers[key]);updateMarkers();wake();};}
+wireToggle($('tglLines'),'lines');
+$('tglLines').addEventListener('click',()=>{if(layers.lines)fetchStates();draw();});
 wireToggle($('tglApt'),'apt'); wireToggle($('tglCam'),'cam');
 wireToggle($('tglFire'),'fire');
 $('tglFire').addEventListener('click',()=>{if(layers.fire)fetchFires();draw();});
