@@ -185,6 +185,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button></div>
       <span class="dock-label">SAT</span>
       <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
+      <button class="icon-btn" id="tglHD" aria-pressed="false" title="1 km HD loop — heavier data" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.05em">HD</button>
       <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
         <svg viewBox="0 0 16 16"><path d="M15 9.5v-1.6L9.6 5.6V1.9C9.6 1.1 9 .4 8 .4s-1.6.7-1.6 1.5v3.7L1 7.9v1.6l5.4-1.5v3.6L4.6 13v1.2L8 13.2l3.4 1V13l-1.8-1.4V8z"/></svg></button>
       <button class="icon-btn" id="tglCam" aria-pressed="false" aria-label="Webcam layer" title="Webcams">
@@ -218,7 +219,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <h2>fog<span class="slash">/</span>west</h2>
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
     <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are live Caltrans and Oregon TripCheck roadside cameras near the coast, tinted by the visibility at the nearest airport; tap for the live image.</p>
-    <p><b>Zoom sharpening:</b> the loop plays at 2&nbsp;km resolution. Zoom in and pause, and the current frame reloads at 1&nbsp;km — "HD" appears next to the frame time.</p>
+    <p><b>Resolution:</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> switches the moving loop itself to 1&nbsp;km frames (roughly 4–6× the data, with slightly larger time steps — best on Wi-Fi). Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
     <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS / <a href="https://www.star.nesdis.noaa.gov/goes/" target="_blank" rel="noopener">STAR</a> (GeoColor by CIRA &amp; NOAA). Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
@@ -246,6 +247,9 @@ const PRODUCTS={geo:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'GeoColor'},
                 ir:{dir:'07',token:'07',label:'IR 3.9 µm'}};
 const BASE_W=2500, BASE_H=1500, HIRES_SCALE=2;
 const SIZE_PREF=[2500,1250,5000,625];
+let hd=false;
+function sizePrefs(){return hd?[5000,2500,1250,625]:SIZE_PREF;}
+function maxFrames(){return hd?18:MAXF;}
 const MAXF=30, HOLD_MS=1150, FPS={0.5:4.5,1:9,2:16};
 const IMG_REFRESH=5*60*1000, WX_REFRESH=10*60*1000;
 const HIRES_MIN_ZOOM=1.25;
@@ -427,7 +431,7 @@ async function listFrames(){
     if(!byTs.has(ts)) byTs.set(ts,{}); byTs.get(ts)[+size]=file;}
   if(!byTs.size) throw new Error('empty listing');
   sizesAvail=[...sizes];
-  const size=SIZE_PREF.find(s=>sizes.has(s))||[...sizes].sort((a,b)=>b-a)[0];
+  const size=sizePrefs().find(s=>sizes.has(s))||[...sizes].sort((a,b)=>b-a)[0];
   lastListing=[...byTs.entries()].filter(([,f])=>f[size])
     .map(([ts,f])=>({t:tsToMs(ts),stamp:ts,url:baseUrl()+f[size]}))
     .sort((a,b)=>a.t-b.t);
@@ -435,7 +439,7 @@ async function listFrames(){
 }
 function windowRange(all,t0,t1){
   const win=all.filter(f=>f.t>=t0&&f.t<=t1);
-  const step=Math.max(1,Math.ceil(win.length/MAXF));
+  const step=Math.max(1,Math.ceil(win.length/maxFrames()));
   const picked=[]; for(let i=win.length-1;i>=0;i-=step) picked.push(win[i]);
   return picked.reverse();
 }
@@ -451,15 +455,16 @@ function windowed(all){
   if(!all.length) return [];
   const latest=all[all.length-1].t;
   const win=all.filter(f=>f.t>=latest-hours*3600000);
-  const step=Math.max(1,Math.ceil(win.length/MAXF));
+  const step=Math.max(1,Math.ceil(win.length/maxFrames()));
   const picked=[]; for(let i=win.length-1;i>=0;i-=step) picked.push(win[i]);
   return picked.reverse();
 }
 function makeCropBitmap(img){
   const sc=img.naturalWidth/BASE_W;
-  const c=document.createElement('canvas'); c.width=CROP.w; c.height=CROP.h;
+  const c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(CROP.w*sc)); c.height=Math.max(1,Math.round(CROP.h*sc));
   const g=c.getContext('2d');
-  g.drawImage(img,CROP.x*sc,CROP.y*sc,CROP.w*sc,CROP.h*sc,0,0,CROP.w,CROP.h);
+  g.drawImage(img,CROP.x*sc,CROP.y*sc,CROP.w*sc,CROP.h*sc,0,0,c.width,c.height);
   return c;
 }
 function loadImg(f){
@@ -515,7 +520,7 @@ async function quietRefresh(){
     const wasLast=idx===frames.length-1;
     frames=frames.concat(ok);
     const cutoff=frames[frames.length-1].t-hours*3600000;
-    while(frames.length>MAXF+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
+    while(frames.length>maxFrames()+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
     if(wasLast)idx=frames.length-1;
     buildRuler(); syncHUD();
   }catch(e){}
@@ -665,25 +670,33 @@ async function fetchFog(){
     const B=80, nB=Math.ceil(pts.length/B);
     const vis=new Float32Array(pts.length*48).fill(NaN);
     const low=new Float32Array(pts.length*48).fill(NaN);
-    let times=[];
-    await Promise.all(Array.from({length:nB},(_,b)=>(async()=>{
-      const seg=pts.slice(b*B,(b+1)*B);
-      const url=`https://api.open-meteo.com/v1/forecast?latitude=${seg.map(p=>p.lat).join(',')}`+
-        `&longitude=${seg.map(p=>p.lon).join(',')}&hourly=visibility,cloud_cover_low`+
-        `&forecast_days=2&timeformat=unixtime&timezone=UTC`;
-      const r=await fetch(url,{cache:'no-store'});
-      if(!r.ok)throw 0;
-      let j=await r.json(); if(!Array.isArray(j))j=[j];
-      j.forEach((loc,k)=>{
-        const i=b*B+k, H=(loc&&loc.hourly)||{};
-        if(!times.length&&Array.isArray(H.time))times=H.time.map(t=>t*1000);
-        (H.visibility||[]).forEach((x,h)=>{if(h<48)vis[i*48+h]=x==null?NaN:x;});
-        (H.cloud_cover_low||[]).forEach((x,h)=>{if(h<48)low[i*48+h]=x==null?NaN:x;});
-      });
-    })()));
-    if(!times.length)throw 0;
+    let times=[], okPts=0;
+    for(let b=0;b<nB;b++){
+      try{
+        const seg=pts.slice(b*B,(b+1)*B);
+        const url=`https://api.open-meteo.com/v1/forecast?latitude=${seg.map(p=>p.lat).join(',')}`+
+          `&longitude=${seg.map(p=>p.lon).join(',')}&hourly=visibility,cloud_cover_low`+
+          `&forecast_days=2&timeformat=unixtime&timezone=UTC`;
+        const r=await fetch(url,{cache:'no-store'});
+        if(!r.ok)throw 0;
+        let j=await r.json(); if(!Array.isArray(j))j=[j];
+        j.forEach((loc,k)=>{
+          const i=b*B+k, H=(loc&&loc.hourly)||{};
+          if(!times.length&&Array.isArray(H.time))times=H.time.map(t=>t*1000);
+          (H.visibility||[]).forEach((x,h)=>{if(h<48)vis[i*48+h]=x==null?NaN:x;});
+          (H.cloud_cover_low||[]).forEach((x,h)=>{if(h<48)low[i*48+h]=x==null?NaN:x;});
+          okPts++;
+        });
+      }catch(e){/* keep the batches that worked */}
+      if(b<nB-1)await new Promise(r=>setTimeout(r,150));
+    }
+    if(!times.length||okPts<pts.length*0.3)throw 0;
     fog={pts,times,vis,low}; fogError=false; fogFetched=Date.now(); fogT=-1;
-  }catch(e){fogError=true;}
+    if(okPts<pts.length*0.9)toast('fog model: partial data this refresh');
+  }catch(e){
+    if(!fogError)toast('fog model unreachable right now');
+    fogError=true;
+  }
   fogLoading=false;
 }
 function splat(g,p,r,rgb,a){
@@ -801,6 +814,12 @@ function draw(){
   const v=view();
   ctx.fillStyle='#0a0e13'; ctx.fillRect(0,0,v.W,v.H);
   if(tmode==='outlook'){
+    const bf=frames[frames.length-1];
+    if(bf&&bf.bmp){
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(bf.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+      ctx.fillStyle='rgba(10,14,19,.5)'; ctx.fillRect(0,0,v.W,v.H);
+    }
     drawBasemap(v);
     if(fog){
       if(playing||!fogCanvas||Math.abs(fogT-olT)>60000)renderFog(olT);
@@ -891,8 +910,8 @@ function syncHUD(){
   }
   const f=frames[idx]; if(!f)return;
   $('frameTime').textContent=fmtTime.format(f.t);
-  const hd=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?(hires.size>=10000?' · HD ½ km':' · HD 1 km'):'';
-  $('frameSub').textContent=`${fmtDate.format(f.t)} · ${PROJ.tag} · ${PRODUCTS[mode].label}${hd}`;
+  const hd2=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?(hires.size>=10000?' · HD ½ km':' · HD 1 km'):(hd?' · 1 km loop':'');
+  $('frameSub').textContent=`${fmtDate.format(f.t)} · ${PROJ.tag} · ${PRODUCTS[mode].label}${hd2}`;
   const last=frames[frames.length-1];
   if(tmode==='replay'){
     chip.classList.remove('on'); $('liveTxt').textContent='REPLAY';
@@ -1212,6 +1231,10 @@ async function reloadMode(prev){
 function wireToggle(btn,key){btn.onclick=()=>{layers[key]=!layers[key];
   btn.setAttribute('aria-pressed',layers[key]);updateMarkers();wake();};}
 wireToggle($('tglApt'),'apt'); wireToggle($('tglCam'),'cam');
+$('tglHD').onclick=()=>{hd=!hd;$('tglHD').setAttribute('aria-pressed',hd);
+  hiresCache.clear();hires={stamp:null,img:null};
+  toast(hd?'HD loop: 1 km frames \u2014 heavier data, fewer steps':'standard loop: 2 km frames');
+  if(tmode==='replay')loadReplay(); else if(tmode==='live')reload(false);};
 
 $('fsBtn').onclick=()=>{try{
   if(document.fullscreenElement)document.exitFullscreen();
