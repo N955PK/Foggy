@@ -488,22 +488,24 @@ function recentScanMinute(k){
   return t-k*5*60000;
 }
 function ssCacheKey(){return 'fw_ss_'+sliderSat();}
+function discoverSecondsAt(baseMs){
+  return new Promise(res=>{
+    let done=false,pending=60;
+    for(let ss=0;ss<60;ss++){
+      const im=new Image();
+      im.onload=()=>{if(!done){done=true;res(ss);}};
+      im.onerror=()=>{if(--pending===0&&!done)res(null);};
+      im.src=tileUrl(stampFor(baseMs,ss),0,0,0);
+    }
+    setTimeout(()=>{if(!done)res(null);},9000);
+  });
+}
 async function discoverSeconds(){
   if(scanSS!=null)return scanSS;
   try{const c=JSON.parse(localStorage.getItem(ssCacheKey())||'null');
     if(c&&Date.now()-c.at<36*3600000){scanSS=c.ss;return scanSS;}}catch(e){}
   for(let k=0;k<3;k++){
-    const base=recentScanMinute(k);
-    const found=await new Promise(res=>{
-      let done=false,pending=60;
-      for(let ss=0;ss<60;ss++){
-        const im=new Image();
-        im.onload=()=>{if(!done){done=true;res(ss);}};
-        im.onerror=()=>{if(--pending===0&&!done)res(null);};
-        im.src=tileUrl(stampFor(base,ss),0,0,0);
-      }
-      setTimeout(()=>{if(!done)res(null);},9000);
-    });
+    const found=await discoverSecondsAt(recentScanMinute(k));
     if(found!=null){
       scanSS=found;
       try{localStorage.setItem(ssCacheKey(),JSON.stringify({ss:found,at:Date.now()}));}catch(e){}
@@ -543,6 +545,13 @@ async function tileTimesJson(deep){
 async function tileTimes(deep){
   try{ return await tileTimesJson(deep); }
   catch(e){
+    if(deep){
+      try{
+        const std=await tileTimesJson(false);   // real stamps, shallower archive
+        tTimesDeep=std;
+        return std;
+      }catch(e2){}
+    }
     await discoverSeconds();      // CORS-free path: probe the scan clock
     timesMode='synth';
     return synthTileTimes(deep);
@@ -1185,9 +1194,18 @@ async function loadReplay(){
     const list=windowRange(all,rT0(),rT0()+hours*3600000);
     if(list.length<2){toast('no imagery stored for that window');return;}
     if(engine==='tiles'&&timesMode==='synth'){
-      const probeOk=await tileProbe(list[0].stamp,0);
+      let ok0=await tileProbe(list[0].stamp,0);
       if(run!==loadRun)return;
-      if(!probeOk){toast('that window is beyond the tile archive');return;}
+      if(!ok0){
+        const ss2=await discoverSecondsAt(list[0].t);   // scans drift; re-find the clock for this window
+        if(run!==loadRun)return;
+        if(ss2!=null){
+          for(const f of list)f.stamp=stampFor(f.t,ss2);
+          ok0=await tileProbe(list[0].stamp,0);
+          if(run!==loadRun)return;
+        }
+      }
+      if(!ok0){toast('no archived tiles found for that window');return;}
     }
     const ok=engine==='tiles'?list:await preload(list,()=>{});
     if(run!==loadRun)return;
