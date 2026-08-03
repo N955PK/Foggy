@@ -323,6 +323,7 @@ const AIRPORTS=[
  {id:'KBOK',n:'Brookings, OR',lat:42.0743,lon:-124.2900},
  {id:'KCEC',n:'Crescent City, CA',lat:41.7803,lon:-124.2366},
  {id:'KACV',n:'Arcata–Eureka, CA',lat:40.9781,lon:-124.1086},
+ {id:'0Q5',code:'0Q5',n:'Shelter Cove, CA',lat:40.0276,lon:-124.0738,noWx:true},
  {id:'KSFO',n:'San Francisco, CA',lat:37.6188,lon:-122.3754},
  {id:'KHAF',n:'Half Moon Bay, CA',lat:37.5136,lon:-122.5011},
  {id:'KWVI',n:'Watsonville, CA',lat:36.9357,lon:-121.7897},
@@ -865,7 +866,7 @@ let tafError=false;
 async function fetchTafs(){
   if(!tafError&&Date.now()-tafFetched<25*60*1000&&Object.keys(tafs).length)return;
   try{
-    const ids=AIRPORTS.map(a=>a.id).join(',');
+    const ids=AIRPORTS.filter(a=>!a.noWx).map(a=>a.id).join(',');
     const r=await fetch(`https://aviationweather.gov/api/data/taf?ids=${ids}&format=json`,{cache:'no-store'});
     if(!r.ok)throw 0;
     let j=await r.json(); if(!Array.isArray(j)) j=(j&&j.data)||[];
@@ -1362,7 +1363,7 @@ function buildAirportMarkers(){
     const el=document.createElement('button');
     el.className='mk apt vna';
     el.innerHTML='<i></i><b></b>';
-    el.querySelector('b').textContent=a.id.slice(1);
+    el.querySelector('b').textContent=a.code||a.id.slice(1);
     el.addEventListener('pointerdown',e=>e.stopPropagation());
     el.addEventListener('click',()=>openCard('apt',a));
     lyr.appendChild(el);
@@ -1381,7 +1382,8 @@ function addCamMarkers(list){
     mkIndex.push({el,u,v,type:'cam',ref:c});
     c._mk=el;
     let best=null,bd=1e9;
-    for(const a of AIRPORTS){const d=Math.hypot((a.lat-c.lat)*110.6,(a.lon-c.lon)*111.3*Math.cos(c.lat*Math.PI/180));
+    for(const a of AIRPORTS){if(a.noWx)continue;
+      const d=Math.hypot((a.lat-c.lat)*110.6,(a.lon-c.lon)*111.3*Math.cos(c.lat*Math.PI/180));
       if(d<bd){bd=d;best=a;}}
     c.apt=best;
   }
@@ -1399,7 +1401,7 @@ function restyleMarkers(){
     }
     const cls=visClass(vis);
     if(a._mk){a._mk.className='mk apt '+cls;
-      a._mk.querySelector('b').textContent=(a.id.slice(1)+' '+(vis!=null?visLabel(vis)+'sm':'')+extra).trim();}
+      a._mk.querySelector('b').textContent=((a.code||a.id.slice(1))+' '+(vis!=null?visLabel(vis)+'sm':'')+extra).trim();}
   }
   for(const c of cams){
     let vis=null;
@@ -1500,6 +1502,7 @@ function drawFirePerims(v){
 
 /* ---------------- NWS observations ---------------- */
 async function fetchObsOne(a){
+  if(a.noWx){obs[a.id]={ok:false,noWx:true};return;}
   const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),9000);
   try{
     const r=await fetch(`https://api.weather.gov/stations/${a.id}/observations/latest`,
@@ -1549,6 +1552,24 @@ function renderCard(){
         <div class="big"><i style="background:var(--${cls})"></i>${f&&f.vis!=null?visLabel(f.vis)+' sm at '+fmtHM.format(olT):(tafs[a.id]?'—':'no TAF issued for this field')}</div>
         <div class="grid">${rows}</div>
         <div class="foot"><span>forecast visibility · statute miles</span><span></span></div>`;
+      return;
+    }
+    if(a.noWx){
+      let nb=null,nd=1e9;
+      for(const x of AIRPORTS){if(x.noWx)continue;
+        const d=Math.hypot((x.lat-a.lat)*110.6,(x.lon-a.lon)*111.3*Math.cos(a.lat*Math.PI/180));
+        if(d<nd){nd=d;nb=x;}}
+      const no=nb&&obs[nb.id];
+      const ncls=visClass(no&&no.ok?no.vis:null);
+      B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.code||a.id} · no on-field weather station</div>
+        <div class="big"><i style="background:var(--vna)"></i>conditions not reported here</div>
+        <div class="grid">
+          <span>nearest report <b>${nb?(nb.code||nb.id.slice(1)):'—'}</b></span>
+          <span>distance <b>${nb?Math.round(nd/1.852)+' nm':'—'}</b></span>
+          <span>their visibility <b style="color:var(--${ncls})">${no&&no.ok&&no.vis!=null?visLabel(no.vis)+' sm':'—'}</b></span>
+          <span>their sky <b>${no&&no.ok?esc(no.txt||'—'):'—'}</b></span>
+        </div>
+        <div class="foot"><span>check the satellite + nearby cams before committing</span><span></span></div>`;
       return;
     }
     const o=obs[a.id];
