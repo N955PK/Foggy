@@ -1681,9 +1681,9 @@ function drawFirePerims(v){
 }
 
 /* ---------------- sky cams (ALERTWest · ALERTCalifornia / PG&E) ---------------- */
-const AW_HOSTS=['https://data.alertwest.org','https://sapi.prod.alertwest.com','https://api.alertwest.org'];
+const AW_HOSTS=['https://api.cdn.prod.alertwest.com','https://alertwest.live'];
 const AW_IMG='https://img.cdn.prod.alertwest.com/data/img';
-let alertCams=[], awFetched=0, awLoading=false, awDead=false;
+let alertCams=[], awFetched=0, awLoading=false, awDead=false, awRetried=false;
 function thinPts(list,cell,cap){
   const seen=new Set(),out=[];
   for(const c of list){
@@ -1709,7 +1709,10 @@ async function loadAlertWest(){
   }
   awLoading=false;
   if(!got){
-    if(!alertCams.length){awDead=true;toast('sky-cam directory unreachable');}
+    if(!alertCams.length){
+      if(!awRetried){awRetried=true;setTimeout(loadAlertWest,60000);}
+      else{awDead=true;toast('sky-cam directory unreachable');}
+    }
     return;
   }
   const locs=new Map((got.locs.data||[]).map(L=>[L.id,L]));
