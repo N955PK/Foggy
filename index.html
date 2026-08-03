@@ -1493,7 +1493,7 @@ function updateMarkers(v){
     const vis=on&&sx>-60&&sx<v.W+60&&sy>-40&&sy<v.H+40;
     m.el.style.display=vis?'flex':'none';
     if(!vis)continue;
-    m.el.style.transform=`translate(${sx}px,${sy}px) translate(-50%,-50%)`;
+    m.el.style.transform=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-6px,-50%)':'translate(-50%,-50%)'}`;
     if(m.type==='apt'){const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
   }
   $('legend').style.display=(layers.apt||layers.cam)?'block':'none';
