@@ -80,6 +80,7 @@ header .brand,#status{pointer-events:auto}
 .icon-btn{width:32px;height:32px;border:1px solid var(--line);border-radius:9px;display:grid;place-items:center;color:var(--dim)}
 .icon-btn svg{width:15px;height:15px;fill:currentColor}
 .icon-btn[aria-pressed="true"]{color:#0a0e13;background:var(--ink);border-color:var(--ink)}
+.tgls{display:flex;gap:9px;align-items:center}
 .spacer{flex:1}
 .dock-label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.14em;margin-right:-3px}
 #hourSel{flex:1;min-width:80px;accent-color:var(--accent);height:22px}
@@ -186,6 +187,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button><button data-m="fire">Fire</button></div>
       <span class="dock-label">SAT</span>
       <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
+      <span class="tgls">
       <button class="icon-btn" id="tglHD" aria-pressed="false" title="1 km HD loop — heavier data" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.05em">HD</button>
       <button class="icon-btn" id="tglLines" aria-pressed="true" aria-label="State and coast lines" title="Boundaries">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 3.5l4-1.6 5 1.6 4-1.6v10.6l-4 1.6-5-1.6-4 1.6zM5.5 1.9v10.6M10.5 3.5v10.6"/></svg></button>
@@ -195,6 +197,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
         <svg viewBox="0 0 16 16"><path d="M8.6.6c.3 2.3-.7 3.6-1.9 4.9C5.4 6.9 4 8.4 4 10.6 4 13.6 6.2 15.5 8 15.5s4-1.6 4-4.6c0-1.2-.4-2.3-1-3.2-.3 1-.8 1.6-1.5 2 .3-2.4-.4-5.6-.9-9.1z"/></svg></button>
       <button class="icon-btn" id="tglCam" aria-pressed="false" aria-label="Webcam layer" title="Webcams">
         <svg viewBox="0 0 16 16"><path d="M1.5 4.2h8.2c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H1.5c-.7 0-1.2-.5-1.2-1.2V5.4c0-.7.5-1.2 1.2-1.2zm10.4 2.6 3.2-1.9c.3-.2.6 0 .6.4v5.4c0 .4-.3.6-.6.4l-3.2-1.9z"/></svg></button>
+      </span>
       <span class="spacer"></span>
       <button class="icon-btn" id="fsBtn" aria-label="Fullscreen"><svg viewBox="0 0 16 16"><path d="M1 6V1h5v2H3v3H1zm14 0h-2V3h-3V1h5v5zM1 10h2v3h3v2H1v-5zm12 3v-3h2v5h-5v-2h3z"/></svg></button>
       <button class="icon-btn" id="infoBtn" aria-label="About"><svg viewBox="0 0 16 16"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a1.1 1.1 0 110 2.2A1.1 1.1 0 018 4zm1.2 8H6.8v-1.2h.6V8.4h-.6V7.2h1.8v3.6h.6V12z"/></svg></button>
