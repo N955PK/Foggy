@@ -160,7 +160,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <div id="status">
       <div id="liveChip"><span class="dot"></span><span id="liveTxt">CONNECTING</span></div>
       <div id="frameTime">—</div>
-      <div id="frameSub">GOES-18 West · PACUS · GeoColor</div>
+      <div id="frameSub">GOES West · GeoColor</div>
     </div>
   </header>
 
@@ -183,6 +183,8 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
       <div class="seg" id="segSpeed"><button data-s="0.5">½×</button><button data-s="1" aria-pressed="true">1×</button><button data-s="2">2×</button></div>
       <span class="dock-label">VIEW</span>
       <div class="seg" id="segMode"><button data-m="geo" aria-pressed="true">Geo</button><button data-m="ir">IR</button></div>
+      <span class="dock-label">SAT</span>
+      <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
       <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
         <svg viewBox="0 0 16 16"><path d="M15 9.5v-1.6L9.6 5.6V1.9C9.6 1.1 9 .4 8 .4s-1.6.7-1.6 1.5v3.7L1 7.9v1.6l5.4-1.5v3.6L4.6 13v1.2L8 13.2l3.4 1V13l-1.8-1.4V8z"/></svg></button>
       <button class="icon-btn" id="tglCam" aria-pressed="false" aria-label="Webcam layer" title="Webcams">
@@ -217,7 +219,7 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
     <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are live Caltrans and Oregon TripCheck roadside cameras near the coast, tinted by the visibility at the nearest airport; tap for the live image.</p>
     <p><b>Zoom sharpening:</b> the loop plays at 2&nbsp;km resolution. Zoom in and pause, and the current frame reloads at 1&nbsp;km — "HD" appears next to the frame time.</p>
-    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour.</p>
+    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS / <a href="https://www.star.nesdis.noaa.gov/goes/" target="_blank" rel="noopener">STAR</a> (GeoColor by CIRA &amp; NOAA). Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Caltrans &amp; ODOT TripCheck. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
@@ -229,14 +231,24 @@ body.zen header,body.zen #dock,body.zen #resetView,body.zen #legend{opacity:0;po
    fog/west — GOES-18 PACUS viewer with georeferenced weather layers
    ===================================================================== */
 const CDN='https://cdn.star.nesdis.noaa.gov';
-const SAT='GOES18';
+const REGIONS={
+  west:{sat:'GOES18',tag:'GOES-18 West',lon0:-137.0*Math.PI/180,
+        x0:-0.07,x1:0.07,yTop:0.12824,yBot:0.04424,
+        corners:[[49.6,-130.8],[49.6,-113.5],[31.2,-130.8],[31.2,-113.5],[49.6,-122],[31.2,-122],[40.5,-130.8],[40.5,-113.5]],
+        anchor:{lat:38.6,lon:-123.0}},
+  usa:{sat:'GOES19',tag:'GOES-19 East',lon0:-75.0*Math.PI/180,
+       x0:-0.10136,x1:0.03864,yTop:0.12824,yBot:0.04424,
+       corners:[[50.7,-125.5],[50.7,-66],[24,-125.5],[24,-66],[50.7,-96],[24,-96],[37,-125.5],[37,-66]],
+       anchor:{lat:38.5,lon:-97.5}}
+};
+let region='west', PROJ=REGIONS.west;
 const PRODUCTS={geo:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'GeoColor'},
                 ir:{dir:'07',token:'07',label:'IR 3.9 µm'}};
 const BASE_W=2500, BASE_H=1500, HIRES_SCALE=2;
 const SIZE_PREF=[2500,1250,5000,625];
 const MAXF=30, HOLD_MS=1150, FPS={0.5:4.5,1:9,2:16};
 const IMG_REFRESH=5*60*1000, WX_REFRESH=10*60*1000;
-const HIRES_MIN_ZOOM=1.6;
+const HIRES_MIN_ZOOM=1.25;
 
 const $=id=>document.getElementById(id);
 const cv=$('cv'), ctx=cv.getContext('2d');
@@ -256,35 +268,37 @@ let cams=[];
 let openMk=null;
 let tmode='live';                 // 'live' | 'replay' | 'outlook'
 let lastListing=[];               // full CDN listing (for replay range discovery)
+let sizesAvail=[2500,5000];       // jpg sizes present in the CDN listing
 let replayDay=null, replayHour=6; // PT-midnight epoch + start hour
 let tafs={}, tafFetched=0;        // TAF cache
 let olk0=0, olk1=0, olT=0;        // outlook window + selected forecast time
 
 /* ---------------- GOES fixed-grid projection ---------------- */
-const PROJ={lon0:-137.0*Math.PI/180, req:6378137, rpol:6356752.31414, H:42164160,
-            x0:-0.07, x1:0.07, yTop:0.12824, yBot:0.04424};
+const GRS={req:6378137, rpol:6356752.31414, H:42164160};
 function llToImg(lat,lon){
   const la=lat*Math.PI/180, lo=lon*Math.PI/180;
-  const k=(PROJ.rpol*PROJ.rpol)/(PROJ.req*PROJ.req);
+  const k=(GRS.rpol*GRS.rpol)/(GRS.req*GRS.req);
   const latc=Math.atan(k*Math.tan(la));
   const e2=1-k;
-  const rc=PROJ.rpol/Math.sqrt(1-e2*Math.cos(latc)*Math.cos(latc));
+  const rc=GRS.rpol/Math.sqrt(1-e2*Math.cos(latc)*Math.cos(latc));
   const dl=lo-PROJ.lon0;
-  const sx=PROJ.H-rc*Math.cos(latc)*Math.cos(dl);
+  const sx=GRS.H-rc*Math.cos(latc)*Math.cos(dl);
   const sy=-rc*Math.cos(latc)*Math.sin(dl);
   const sz=rc*Math.sin(latc);
   const r=Math.sqrt(sx*sx+sy*sy+sz*sz);
   const x=Math.asin(-sy/r), y=Math.atan(sz/sx);
   return [(x-PROJ.x0)/(PROJ.x1-PROJ.x0)*BASE_W, (PROJ.yTop-y)/(PROJ.yTop-PROJ.yBot)*BASE_H];
 }
-const CROP=(()=>{
-  const pts=[[49.6,-130.8],[49.6,-113.5],[31.2,-130.8],[31.2,-113.5],[49.6,-122],[31.2,-122],[40.5,-130.8],[40.5,-113.5]];
+let CROP={x:0,y:0,w:1,h:1};
+function computeCrop(){
   let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
-  for(const [la,lo] of pts){const [x,y]=llToImg(la,lo);x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  for(const [la,lo] of PROJ.corners){const [x,y]=llToImg(la,lo);
+    x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
   x0=Math.max(0,Math.floor(x0-8)); y0=Math.max(0,Math.floor(y0-8));
   x1=Math.min(BASE_W,Math.ceil(x1+8)); y1=Math.min(BASE_H,Math.ceil(y1+8));
-  return {x:x0,y:y0,w:x1-x0,h:y1-y0};
-})();
+  CROP={x:x0,y:y0,w:x1-x0,h:y1-y0};
+}
+computeCrop();
 function llToWorld(lat,lon){const [x,y]=llToImg(lat,lon);return [x-CROP.x,y-CROP.y];}
 
 /* ---------------- data: airports ---------------- */
@@ -401,17 +415,18 @@ function msToTs(t){const d=new Date(t);
   const doy=Math.floor((t-Date.UTC(d.getUTCFullYear(),0,1))/86400000)+1;
   const p=(n,w)=>String(n).padStart(w,'0');
   return ''+d.getUTCFullYear()+p(doy,3)+p(d.getUTCHours(),2)+p(d.getUTCMinutes(),2);}
-function baseUrl(){return `${CDN}/${SAT}/ABI/CONUS/${PRODUCTS[mode].dir}/`;}
+function baseUrl(){return `${CDN}/${PROJ.sat}/ABI/CONUS/${PRODUCTS[mode].dir}/`;}
 
 async function listFrames(){
   const res=await fetch(baseUrl(),{cache:'no-store'});
   if(!res.ok) throw new Error('HTTP '+res.status);
   const html=await res.text();
-  const re=new RegExp(`href="((\\d{11})_${SAT}-ABI-CONUS-${PRODUCTS[mode].token}-(\\d+)x\\d+\\.jpg)"`,'g');
+  const re=new RegExp(`href="((\\d{11})_${PROJ.sat}-ABI-CONUS-${PRODUCTS[mode].token}-(\\d+)x\\d+\\.jpg)"`,'g');
   const byTs=new Map(), sizes=new Set(); let m;
   while((m=re.exec(html))){const [,file,ts,size]=m; sizes.add(+size);
     if(!byTs.has(ts)) byTs.set(ts,{}); byTs.get(ts)[+size]=file;}
   if(!byTs.size) throw new Error('empty listing');
+  sizesAvail=[...sizes];
   const size=SIZE_PREF.find(s=>sizes.has(s))||[...sizes].sort((a,b)=>b-a)[0];
   lastListing=[...byTs.entries()].filter(([,f])=>f[size])
     .map(([ts,f])=>({t:tsToMs(ts),stamp:ts,url:baseUrl()+f[size]}))
@@ -429,7 +444,7 @@ function synthFrames(minuteMod){
   while((Math.floor(t/60000)%5)!==minuteMod) t-=60000;
   const n=hours*12+4;
   for(let i=0;i<n;i++,t-=5*60000){const st=msToTs(t);
-    out.push({t,stamp:st,url:`${baseUrl()}${st}_${SAT}-ABI-CONUS-${PRODUCTS[mode].token}-2500x1500.jpg`});}
+    out.push({t,stamp:st,url:`${baseUrl()}${st}_${PROJ.sat}-ABI-CONUS-${PRODUCTS[mode].token}-2500x1500.jpg`});}
   return out.reverse();
 }
 function windowed(all){
@@ -507,19 +522,27 @@ async function quietRefresh(){
 }
 
 /* ---------------- hi-res sharpening ---------------- */
-function hiresUrl(stamp){return `${baseUrl()}${stamp}_${SAT}-ABI-CONUS-GEOCOLOR-${BASE_W*HIRES_SCALE}x${BASE_H*HIRES_SCALE}.jpg`;}
+function hiresSize(){
+  const target=zoom>=4.2?10000:5000;
+  const cands=sizesAvail.filter(x=>x>2500&&x<=target);
+  return cands.length?Math.max(...cands):5000;
+}
+function hiresUrl(stamp,size){return `${baseUrl()}${stamp}_${PROJ.sat}-ABI-CONUS-GEOCOLOR-${size}x${size*3/5}.jpg`;}
 function scheduleHires(){clearTimeout(hiresTimer);hiresTimer=setTimeout(loadHires,420);}
 function loadHires(){
-  if(hiresDead||mode!=='geo'||playing||zoom<HIRES_MIN_ZOOM)return;
+  if(hiresDead||mode!=='geo'||playing||zoom<HIRES_MIN_ZOOM||tmode==='outlook')return;
   const f=frames[idx]; if(!f||!f.stamp)return;
-  if(hires.stamp===f.stamp)return;
-  if(hiresCache.has(f.stamp)){hires={stamp:f.stamp,img:hiresCache.get(f.stamp)};draw();syncHUD();return;}
+  const size=hiresSize(), key=f.stamp+'_'+size;
+  if(hires.stamp===f.stamp&&hires.size>=size)return;
+  if(hiresCache.has(key)){hires={stamp:f.stamp,size,img:hiresCache.get(key)};draw();syncHUD();return;}
   const stamp=f.stamp, im=new Image(); im.decoding='async';
-  im.onload=()=>{hiresCache.set(stamp,im);
+  im.onload=()=>{
+    if(size>=10000)hiresCache.clear();
+    hiresCache.set(key,im);
     if(hiresCache.size>3){const k=hiresCache.keys().next().value;hiresCache.delete(k);}
-    if(frames[idx]&&frames[idx].stamp===stamp&&!playing){hires={stamp,img:im};draw();syncHUD();}};
-  im.onerror=()=>{hiresDead=true;};
-  im.src=hiresUrl(stamp);
+    if(frames[idx]&&frames[idx].stamp===stamp&&!playing){hires={stamp,size,img:im};draw();syncHUD();}};
+  im.onerror=()=>{if(size>=10000){sizesAvail=sizesAvail.filter(x=>x<10000);}else hiresDead=true;};
+  im.src=hiresUrl(stamp,size);
 }
 
 /* ---------------- fog outlook (NWS TAF) ---------------- */
@@ -572,12 +595,47 @@ function tafAt(id,T){
 function enterOutlook(){
   setPlaying(false);
   if(frames.length){idx=frames.length-1;}
-  olk0=Date.now(); olk1=olk0+18*3600000; olT=olk0;
+  olk0=Date.now(); olk1=olk0+18*3600000; olT=olk0; olHeld=false; holdUntil=0;
   if(!layers.apt){layers.apt=true;$('tglApt').setAttribute('aria-pressed','true');}
   buildRuler(); restyleMarkers(); updateMarkers(); syncHUD(); draw();
   fetchTafs().then(()=>{restyleMarkers();if(openMk)renderCard();syncHUD();});
   fetchFog().then(()=>{fogT=-1;draw();syncHUD();});
   toast('drag the timeline into the next 18 hours');
+}
+
+/* ---------------- outlook basemap (vector coast + borders) ---------------- */
+const GEO_COAST=[[48.39,-124.73],[48.15,-124.72],[47.9,-124.63],[47.55,-124.35],[47.0,-124.17],[46.72,-124.09],[46.26,-124.06],[46.0,-123.93],[45.7,-123.95],[45.45,-123.97],[45.2,-123.97],[44.9,-124.03],[44.62,-124.06],[44.3,-124.10],[44.0,-124.12],[43.7,-124.15],[43.35,-124.33],[43.0,-124.44],[42.84,-124.55],[42.4,-124.42],[42.0,-124.21],[41.75,-124.19],[41.4,-124.07],[40.93,-124.13],[40.6,-124.30],[40.44,-124.40],[40.2,-124.36],[39.8,-123.85],[39.4,-123.81],[38.95,-123.73],[38.5,-123.33],[38.31,-123.00],[37.99,-122.97],[37.9,-122.68],[37.82,-122.52],[37.7,-122.50],[37.3,-122.40],[37.1,-122.29],[36.95,-122.02],[36.80,-121.79],[36.6,-121.90],[36.3,-121.89],[35.9,-121.45],[35.63,-121.19],[35.3,-120.88],[35.15,-120.65],[34.9,-120.65],[34.58,-120.62],[34.45,-120.47],[34.40,-119.85],[34.30,-119.30],[34.05,-118.95],[33.98,-118.50],[33.75,-118.35],[33.72,-118.10],[33.45,-117.70],[33.20,-117.40],[32.85,-117.28],[32.66,-117.16],[32.53,-117.12]];
+const GEO_BAY=[[37.82,-122.47],[37.95,-122.42],[38.05,-122.35],[37.90,-122.30],[37.60,-122.10],[37.47,-122.03]];
+const GEO_BORDERS=[
+ [[42,-124.21],[42,-113.6]],
+ [[42,-120],[39,-120],[35.0,-114.63],[32.72,-114.72]],
+ [[32.53,-117.12],[32.72,-114.72]],
+ [[46.26,-124.06],[46.2,-123.6],[45.6,-122.7],[45.65,-121.2],[45.94,-119.6],[46.0,-118.9],[46.0,-116.92]],
+ [[49,-124.7],[49,-113.6]],
+ [[46.0,-116.92],[44,-117.02],[42,-117.03]],
+ [[49,-117.03],[46.0,-116.92]]
+];
+let bmPaths=null;
+function bmPoly(path,pts,cont){pts.forEach(([la,lo],i)=>{const [u,v]=llToWorld(la,lo);(i||cont)?path.lineTo(u,v):path.moveTo(u,v);});}
+function buildBasemap(){
+  const land=new Path2D(), coast=new Path2D(), bay=new Path2D(), borders=new Path2D();
+  bmPoly(coast,GEO_COAST); bmPoly(bay,GEO_BAY);
+  for(const seg of GEO_BORDERS) bmPoly(borders,seg);
+  bmPoly(land,GEO_COAST);
+  bmPoly(land,[[31.8,-116.65],[31.3,-116.5],[31.3,-113.4],[49.8,-113.4],[49.8,-124.9]],true);
+  land.closePath();
+  bmPaths={land,coast,bay,borders};
+}
+function drawBasemap(v){
+  if(!bmPaths)buildBasemap();
+  ctx.save();
+  ctx.translate(v.tx,v.ty); ctx.scale(v.s,v.s);
+  ctx.fillStyle='rgba(233,237,241,.055)'; ctx.fill(bmPaths.land);
+  ctx.lineJoin='round'; ctx.lineCap='round';
+  ctx.strokeStyle='rgba(233,237,241,.18)'; ctx.lineWidth=1/v.s; ctx.stroke(bmPaths.borders);
+  ctx.strokeStyle='rgba(233,237,241,.42)'; ctx.lineWidth=1.5/v.s; ctx.stroke(bmPaths.coast);
+  ctx.strokeStyle='rgba(233,237,241,.30)'; ctx.lineWidth=1/v.s; ctx.stroke(bmPaths.bay);
+  ctx.restore();
 }
 
 /* ---------------- model fog field (Open-Meteo · HRRR/GFS) ---------------- */
@@ -702,6 +760,11 @@ async function loadReplay(){
 /* ---------------- time-mode switching ---------------- */
 async function setTMode(v){
   if(v===tmode)return;
+  if(v==='outlook'&&region!=='west'){
+    toast('outlook covers the West Coast \u2014 switch SAT to WEST');
+    $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t===tmode));
+    return;
+  }
   tmode=v;
   $('replayBar').style.display=v==='replay'?'flex':'none';
   if(v==='outlook'){ enterOutlook(); return; }
@@ -737,6 +800,15 @@ function clampPan(){
 function draw(){
   const v=view();
   ctx.fillStyle='#0a0e13'; ctx.fillRect(0,0,v.W,v.H);
+  if(tmode==='outlook'){
+    drawBasemap(v);
+    if(fog){
+      if(playing||!fogCanvas||Math.abs(fogT-olT)>60000)renderFog(olT);
+      if(fogCanvas)ctx.drawImage(fogCanvas,0,0,fogCanvas.width,fogCanvas.height,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
+    }
+    updateMarkers(v);
+    return;
+  }
   const f=frames[idx];
   if(f&&f.bmp){
     ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
@@ -744,13 +816,6 @@ function draw(){
     if(!playing&&hires.img&&f.stamp&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM){
       const hs=hires.img.naturalWidth/BASE_W;
       ctx.drawImage(hires.img,CROP.x*hs,CROP.y*hs,CROP.w*hs,CROP.h*hs,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
-    }
-    if(tmode==='outlook'){
-      ctx.fillStyle='rgba(10,14,19,.38)';ctx.fillRect(0,0,v.W,v.H);
-      if(fog){
-        if(Math.abs(fogT-olT)>60000||!fogCanvas)renderFog(olT);
-        if(fogCanvas)ctx.drawImage(fogCanvas,0,0,fogCanvas.width,fogCanvas.height,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
-      }
     }
   }
   updateMarkers(v);
@@ -763,28 +828,39 @@ function zoomAt(px,py,target){
   atHome=false; clampPan(); draw(); syncZoomUI();
   if(!playing) scheduleHires();
 }
-const HOME_ANCHOR={x:438,y:340}; // mid-coast, in world px
 function computeHome(){
   const W=innerWidth,H=innerHeight;
   const s0=Math.min(W/CROP.w,H/CROP.h), cover=Math.max(W/CROP.w,H/CROP.h);
   homeZ=Math.min(cover/s0*1.002,6);      // fill the screen, no letterbox
   const s=s0*homeZ;
-  homeX=W/2-HOME_ANCHOR.x*s-(W-CROP.w*s)/2;
-  homeY=H/2-HOME_ANCHOR.y*s-(H-CROP.h*s)/2;
+  const [ax,ay]=llToWorld(PROJ.anchor.lat,PROJ.anchor.lon);
+  homeX=W/2-ax*s-(W-CROP.w*s)/2;
+  homeY=H/2-ay*s-(H-CROP.h*s)/2;
 }
 function goHome(){computeHome();zoom=homeZ;panX=homeX;panY=homeY;atHome=true;clampPan();draw();syncZoomUI();}
 function resetView(){goHome();}
 function syncZoomUI(){$('resetView').style.display=atHome?'none':'block';}
 
 /* ---------------- playback ---------------- */
+let olHeld=false,lastOlRestyle=0;
 function tick(now){
   const dt=Math.min(now-lastTick,100); lastTick=now;
-  if(playing&&frames.length>1&&now>=holdUntil){
-    acc+=dt; const interval=1000/FPS[speed];
-    if(acc>=interval){acc=0;
-      if(idx>=frames.length-1)idx=0;
-      else{idx++; if(idx===frames.length-1)holdUntil=now+HOLD_MS;}
-      draw(); syncHUD();}
+  if(playing&&now>=holdUntil){
+    if(tmode==='outlook'){
+      if(olHeld){olT=olk0;olHeld=false;}
+      else{
+        olT+=dt*4629*speed;               // 18 h sweeps in ~14 s at 1×
+        if(olT>=olk1){olT=olk1;olHeld=true;holdUntil=now+1200;}
+      }
+      draw(); syncHUD();
+      if(now-lastOlRestyle>350){lastOlRestyle=now;restyleMarkers();}
+    }else if(frames.length>1){
+      acc+=dt; const interval=1000/FPS[speed];
+      if(acc>=interval){acc=0;
+        if(idx>=frames.length-1)idx=0;
+        else{idx++; if(idx===frames.length-1)holdUntil=now+HOLD_MS;}
+        draw(); syncHUD();}
+    }
   }
   requestAnimationFrame(tick);
 }
@@ -793,7 +869,7 @@ function setPlaying(p){
   $('icPlay').style.display=p?'none':'block';
   $('icPause').style.display=p?'block':'none';
   $('playBtn').setAttribute('aria-label',p?'Pause':'Play');
-  if(!p) scheduleHires(); else hires={stamp:null,img:null};
+  if(tmode!=='outlook'){ if(!p) scheduleHires(); else hires={stamp:null,img:null}; }
   wake(); draw();
 }
 
@@ -815,8 +891,8 @@ function syncHUD(){
   }
   const f=frames[idx]; if(!f)return;
   $('frameTime').textContent=fmtTime.format(f.t);
-  const hd=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?' · HD 1 km':'';
-  $('frameSub').textContent=`${fmtDate.format(f.t)} · GOES-18 · ${PRODUCTS[mode].label}${hd}`;
+  const hd=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?(hires.size>=10000?' · HD ½ km':' · HD 1 km'):'';
+  $('frameSub').textContent=`${fmtDate.format(f.t)} · ${PROJ.tag} · ${PRODUCTS[mode].label}${hd}`;
   const last=frames[frames.length-1];
   if(tmode==='replay'){
     chip.classList.remove('on'); $('liveTxt').textContent='REPLAY';
@@ -1091,6 +1167,25 @@ segWire($('segHours'),'h',v=>{hours=+v;
   if(tmode==='replay')loadReplay();
   else if(tmode==='live'){reload(false);toast(`showing last ${v} hours`);}});
 segWire($('segTime'),'t',v=>setTMode(v));
+segWire($('segReg'),'r',v=>switchRegion(v));
+function recomputePositions(){
+  for(const m of mkIndex){const [u,vv]=llToWorld(m.ref.lat,m.ref.lon); m.u=u; m.v=vv;}
+  if(fog)for(const pt of fog.pts){const [u,vv]=llToWorld(pt.lat,pt.lon); pt.u=u; pt.v=vv;}
+}
+async function switchRegion(v){
+  if(v===region)return;
+  if(tmode==='outlook'){
+    tmode='live';
+    $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='live'));
+  }
+  region=v; PROJ=REGIONS[v];
+  computeCrop(); recomputePositions(); bmPaths=null; fogCanvas=null; fogT=-1;
+  hires={stamp:null,img:null}; hiresCache.clear(); hiresDead=false;
+  lastListing=[]; replayDay=null; frames=[]; idx=0;
+  atHome=true; goHome();
+  if(tmode==='replay'){ try{await listFrames();}catch(e){} buildDayChips(); loadReplay(); }
+  else reload(true);
+}
 $('hourSel').addEventListener('input',()=>{replayHour=+$('hourSel').value;syncReplayLbl();});
 $('hourSel').addEventListener('change',()=>{replayHour=+$('hourSel').value;loadReplay();});
 setInterval(()=>{if(tmode==='outlook'&&!document.hidden)fetchTafs().then(()=>{restyleMarkers();syncHUD();});},WX_REFRESH);
