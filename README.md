@@ -22,3 +22,5 @@ One self-contained `index.html` — no build step, no dependencies, no backend, 
 Imagery: [NOAA / NESDIS / STAR](https://www.star.nesdis.noaa.gov/goes/) — GOES-West (GOES-18); GeoColor by CIRA & NOAA. Weather observations: [National Weather Service](https://www.weather.gov/). Cameras: Caltrans (CWWP2) and Oregon DOT TripCheck. Imagery and data are informational only — not for navigation, aviation, or safety-of-life use.
 
 A West Coast homage to [fog.today](https://fog.today).
+
+<!-- build 1785863482 -->
