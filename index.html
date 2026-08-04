@@ -231,7 +231,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
     <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
     <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
-    <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: ridge-top sky cams from <a href="https://alertcalifornia.org/" target="_blank" rel="noopener">ALERTCalifornia | UC San Diego</a> via ALERTWest (many PG&amp;E-sponsored) — mountaintop views that show the fog deck from above. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
+    <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Shelter Cove airport &amp; headlands cams by <a href="http://northcoastaviation.com/" target="_blank" rel="noopener">NorthCoastAviation</a> / Inn of the Lost Coast, and ridge-top sky cams from <a href="https://alertcalifornia.org/" target="_blank" rel="noopener">ALERTCalifornia | UC San Diego</a> via ALERTWest (many PG&amp;E-sponsored) — mountaintop views that show the fog deck from above. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
 </div>
 
@@ -1827,13 +1827,14 @@ function renderCard(){
   }else{
     const c=openMk.ref, o=c.apt&&obs[c.apt.id];
     const cls=visClass(o&&o.ok?o.vis:null);
-    const bust=c.img+(c.img.includes('?')?'&':'?')+'t='+Date.now();
+    const bust=c.img?(c.img+(c.img.includes('?')?'&':'?')+'t='+Date.now()):'';
     B.innerHTML=`<h3>${esc(c.n)}</h3><div class="sub">${esc(c.src)}${c.route?' · '+esc(c.route):''}</div>
       <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok&&o.vis!=null?visLabel(o.vis)+' sm at '+c.apt.id:'nearby visibility unknown'}</div>
       ${c.az!=null?`<div class="grid"><span>looking <b>${compass(c.az)} · ${Math.round(c.az)}°</b></span><span>field of view <b>${c.fov?Math.round(c.fov)+'°':'—'}</b></span></div>`:''}
-      <img alt="${esc(c.n)}" src="${bust}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-      <div style="display:none;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px">camera image unavailable right now</div>
-      <div class="foot"><span>live still · refreshes ~1–5 min</span><button id="camRefresh">refresh</button></div>`;
+      ${c.img?`<img alt="${esc(c.n)}" src="${bust}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+      <div style="display:none;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px">camera image unavailable right now${c.link?' — try the source link below':''}</div>`:`
+      <a href="${c.link}" target="_blank" rel="noopener" style="display:block;text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:10px">open live view ↗</a>`}
+      <div class="foot"><span>${c.img?'live still':'external live view'}</span><span>${c.link?`<a href="${c.link}" target="_blank" rel="noopener" style="color:var(--dim);margin-right:10px">source ↗</a>`:''}${c.img?'<button id="camRefresh">refresh</button>':''}</span></div>`;
     const btn=B.querySelector('#camRefresh'); if(btn)btn.onclick=()=>renderCard();
   }
 }
@@ -1989,6 +1990,24 @@ buildAirportMarkers();
 setPlaying(playing);
 reload(true);
 refreshObs();
+const CUSTOM_CAMS=[
+ {n:'Shelter Cove Airport — West',lat:40.0276,lon:-124.0738,custom:true,lv:0,az:270,fov:60,ox:-8,oy:-4,
+  img:'https://northcoastaviation.com/shelter_cove/cove-west000M.jpg',
+  link:'http://northcoastaviation.com/shelter_cove/shelter_cove_west.htm',
+  src:'NorthCoastAviation · Shelter Cove pilots'},
+ {n:'Shelter Cove Airport — Southwest',lat:40.0276,lon:-124.0738,custom:true,lv:0,az:225,fov:60,ox:8,oy:6,
+  link:'http://northcoastaviation.com/shelter_cove/shelter_cove_southwest.htm',
+  src:'NorthCoastAviation · Shelter Cove pilots'},
+ {n:'Shelter Cove — Headlands NW',lat:40.0243,lon:-124.0772,custom:true,lv:0,az:315,fov:60,
+  img:'https://northcoastaviation.com/shelter_cove/lostcoastinn02.jpg',
+  link:'http://northcoastaviation.com/shelter_cove/shelter_cove_lost_coast_inn_headlands.htm',
+  src:'Inn of the Lost Coast · NorthCoastAviation'},
+ {n:'Shelter Cove — Surf Cam',lat:40.0243,lon:-124.0772,custom:true,lv:0,az:240,fov:55,ox:-9,oy:5,
+  link:'http://northcoastaviation.com/shelter_cove/shelter_cove_lost_coast_inn_surf.htm',
+  src:'Inn of the Lost Coast · NorthCoastAviation'},
+];
+cams=cams.concat(CUSTOM_CAMS);
+addCamMarkers(CUSTOM_CAMS);
 loadAlertWest();
 setInterval(()=>{if(layers.cam&&!document.hidden)loadAlertWest();},10*60*1000);
 setInterval(quietRefresh,IMG_REFRESH);
