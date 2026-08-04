@@ -1515,7 +1515,7 @@ function updateMarkers(v){
     const vis=on&&sx>-60&&sx<v.W+60&&sy>-40&&sy<v.H+40;
     if(m._v!==vis){m._v=vis;m.el.style.display=vis?'flex':'none';}
     if(!vis)continue;
-    const tr=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-8px,-50%)':'translate(-50%,-50%)'}`;
+    const tr=`translate(${sx+(m.ref.ox||0)}px,${sy+(m.ref.oy||0)}px) ${m.type==='apt'?'translate(-8px,-50%)':'translate(-50%,-50%)'}`;
     if(m._t!==tr){m._t=tr;m.el.style.transform=tr;}
     if(m.type==='apt'&&m._l!==showLbl){m._l=showLbl;
       const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
@@ -1684,6 +1684,7 @@ async function loadAlertWest(){
   const out=[];
   for(const c of (got.cams.data||[])){
     if(+c.pv||+c.off)continue;
+    if(/caltrans/i.test(String(c.sp||''))||/caltrans/i.test(String(c.pr||'')))continue;
     const L=locs.get(c.lid);
     if(!L||+L.lp)continue;
     const lat=+L.lat,lon=+L.lon;
@@ -1691,19 +1692,39 @@ async function loadAlertWest(){
     const m=/_(\d{10})_/.exec(c.img||'');
     if(!m)continue;
     const d=new Date(+m[1]*1000);
-    out.push({n:String(c.cn||'sky cam').replace(/_/g,' '),lat,lon,sky:true,
+    out.push({n:String(c.cn||'sky cam').replace(/_/g,' '),lat,lon,sky:true,lid:c.lid,
       az:isFinite(+c.p)?((+c.p%360)+360)%360:null,
       fov:isFinite(+c.fov)?+c.fov:null,
       img:`${AW_IMG}/${c.id}/${d.getUTCFullYear()}/${p2(d.getUTCMonth()+1)}/${p2(d.getUTCDate())}/${c.img}`,
       src:(c.sp?c.sp+' · ':'')+'ALERTCalifornia / ALERTWest'});
   }
-  const thin=tagCamLevels(out);
+  const groups=new Map();
+  for(const c of out){
+    const k=c.lid!=null?('L'+c.lid):(c.lat.toFixed(4)+','+c.lon.toFixed(4));
+    if(!groups.has(k))groups.set(k,[]);
+    groups.get(k).push(c);
+  }
+  const reps=[...groups.values()].map(g=>g[0]);
+  tagCamLevels(reps);
+  for(const g of groups.values()){
+    const lv=g[0].lv;
+    const used=[];
+    g.forEach((c,i)=>{
+      c.lv=lv;
+      if(g.length>1){
+        let ang=(c.az!=null)?c.az*Math.PI/180:(i*2*Math.PI/g.length);
+        while(used.some(u=>Math.abs(Math.atan2(Math.sin(ang-u),Math.cos(ang-u)))<0.5))ang+=0.7;
+        used.push(ang);
+        c.ox=Math.round(10*Math.sin(ang)); c.oy=Math.round(-10*Math.cos(ang));
+      }else{c.ox=0;c.oy=0;}
+    });
+  }
   for(let i=mkIndex.length-1;i>=0;i--){
     if(mkIndex[i].type==='cam'&&mkIndex[i].ref.sky){mkIndex[i].el.remove();mkIndex.splice(i,1);}
   }
-  cams=cams.filter(c=>!c.sky).concat(thin);
-  alertCams=thin; awFetched=Date.now();
-  addCamMarkers(thin);
+  cams=cams.filter(c=>!c.sky).concat(out);
+  alertCams=out; awFetched=Date.now();
+  addCamMarkers(out);
 }
 
 /* ---------------- NWS observations ---------------- */
