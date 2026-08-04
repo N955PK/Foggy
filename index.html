@@ -28,8 +28,8 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 /* ---- markers ---- */
 #lyr{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
 .mk{position:absolute;left:0;top:0;pointer-events:auto;display:flex;align-items:center;gap:5px;will-change:transform}
-.mk i{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(10,14,19,.9);box-shadow:0 0 0 1px rgba(233,237,241,.25),0 1px 4px rgba(0,0,0,.6);flex:0 0 9px}
-.mk b{font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.03em;color:var(--ink);
+.mk i{width:13px;height:13px;border-radius:50%;border:2px solid rgba(10,14,19,.9);box-shadow:0 0 0 1px rgba(233,237,241,.3),0 1px 4px rgba(0,0,0,.6);flex:0 0 13px}
+.mk b{font-family:var(--mono);font-weight:600;font-size:11.5px;letter-spacing:.03em;color:var(--ink);
   background:rgba(10,14,19,.72);border:1px solid var(--line);border-radius:5px;padding:1.5px 5px;white-space:nowrap;
   text-shadow:0 1px 2px #000}
 .mk.cam svg{width:15px;height:15px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7))}
@@ -1433,14 +1433,15 @@ cv.addEventListener('wheel',e=>{e.preventDefault();
 /* ---------------- markers & layers ---------------- */
 const lyr=$('lyr');
 const mkIndex=[];
-const camSvg='<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4.2h8.2c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H1.5c-.7 0-1.2-.5-1.2-1.2V5.4c0-.7.5-1.2 1.2-1.2zm10.4 2.6 3.2-1.9c.3-.2.6 0 .6.4v5.4c0 .4-.3.6-.6.4l-3.2-1.9z"/></svg>';
+const camSvg='<svg viewBox="-10 -10 20 20" style="width:26px;height:26px"><circle r="3" fill="currentColor"/><circle r="6.6" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".5"/></svg>';
 function wedgeSvg(az,fov){
   const h=Math.min(45,Math.max(14,(fov||60)/2))*Math.PI/180, R=9;
-  const x1=(R*Math.sin(-h)).toFixed(2), y1=(-R*Math.cos(-h)).toFixed(2);
-  const x2=(R*Math.sin(h)).toFixed(2),  y2=(-R*Math.cos(h)).toFixed(2);
-  return `<svg viewBox="-10 -11 20 22" style="width:19px;height:19px;transform:rotate(${az}deg)">`+
-    `<path d="M0 0 L${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2} Z" fill="currentColor" opacity=".45"/>`+
-    `<circle r="2.6" fill="currentColor"/></svg>`;
+  const a=((az||0)%360)*Math.PI/180;
+  const x1=(R*Math.sin(a-h)).toFixed(2), y1=(-R*Math.cos(a-h)).toFixed(2);
+  const x2=(R*Math.sin(a+h)).toFixed(2), y2=(-R*Math.cos(a+h)).toFixed(2);
+  return `<svg viewBox="-10 -10 20 20" style="width:26px;height:26px">`+
+    `<path d="M0 0 L${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2} Z" fill="currentColor" opacity=".5"/>`+
+    `<circle r="2.8" fill="currentColor"/></svg>`;
 }
 function visClass(sm){return sm==null?'vna':sm<1?'v0':sm<3?'v1':sm<6?'v2':'v3';}
 function visLabel(sm){return sm==null?'—':sm>=10?'10+':sm>=3?String(Math.round(sm)):sm.toFixed(1);}
@@ -1514,7 +1515,7 @@ function updateMarkers(v){
     const vis=on&&sx>-60&&sx<v.W+60&&sy>-40&&sy<v.H+40;
     if(m._v!==vis){m._v=vis;m.el.style.display=vis?'flex':'none';}
     if(!vis)continue;
-    const tr=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-6px,-50%)':'translate(-50%,-50%)'}`;
+    const tr=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-8px,-50%)':'translate(-50%,-50%)'}`;
     if(m._t!==tr){m._t=tr;m.el.style.transform=tr;}
     if(m.type==='apt'&&m._l!==showLbl){m._l=showLbl;
       const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
@@ -1607,7 +1608,7 @@ function rebuildFireMarkers(list){
   for(const f of list){
     const [u,v]=llToWorld(f.lat,f.lon);
     const el=document.createElement('button');
-    const big=f.acres>=10000?18:f.acres>=1000?15:12;
+    const big=f.acres>=10000?26:f.acres>=1000?21:16;
     el.className='mk fire'; el.innerHTML=fireSvg; el.title=f.n;
     el.querySelector('svg').style.width=big+'px'; el.querySelector('svg').style.height=big+'px';
     el.querySelector('svg').style.color=(f.pct!=null&&f.pct>=80)?'#ffa32e':'#ff5c39';
