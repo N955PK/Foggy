@@ -1708,16 +1708,17 @@ async function loadAlertWest(){
   tagCamLevels(reps);
   for(const g of groups.values()){
     const lv=g[0].lv;
-    const used=[];
-    g.forEach((c,i)=>{
-      c.lv=lv;
-      if(g.length>1){
-        let ang=(c.az!=null)?c.az*Math.PI/180:(i*2*Math.PI/g.length);
-        while(used.some(u=>Math.abs(Math.atan2(Math.sin(ang-u),Math.cos(ang-u)))<0.5))ang+=0.7;
-        used.push(ang);
-        c.ox=Math.round(10*Math.sin(ang)); c.oy=Math.round(-10*Math.cos(ang));
-      }else{c.ox=0;c.oy=0;}
-    });
+    for(const c of g)c.lv=lv;
+    if(g.length>1){
+      const n=g.length;
+      const items=g.map((c,i)=>({c,ang:(c.az!=null)?(c.az*Math.PI/180):(i*2*Math.PI/n)}));
+      items.sort((x,y)=>x.ang-y.ang);
+      const minSep=Math.min(0.55,(2*Math.PI/n)*0.92);
+      for(let i=1;i<items.length;i++)
+        if(items[i].ang-items[i-1].ang<minSep)items[i].ang=items[i-1].ang+minSep;
+      const R=n>4?12:10;
+      for(const it of items){it.c.ox=Math.round(R*Math.sin(it.ang));it.c.oy=Math.round(-R*Math.cos(it.ang));}
+    }else{g[0].ox=0;g[0].oy=0;}
   }
   for(let i=mkIndex.length-1;i>=0;i--){
     if(mkIndex[i].type==='cam'&&mkIndex[i].ref.sky){mkIndex[i].el.remove();mkIndex.splice(i,1);}
