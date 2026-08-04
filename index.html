@@ -1417,12 +1417,13 @@ ruler.addEventListener('pointermove',e=>{if(ruler.hasPointerCapture(e.pointerId)
 ruler.addEventListener('pointerup',()=>{if(scrubResume){holdUntil=performance.now()+700;setPlaying(true);}else scheduleHires();});
 
 /* ---------------- gestures ---------------- */
-const pts=new Map(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false,tapMkEl=null;
+const pts=new Map(), tracked=new Set(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false,tapMkEl=null;
 stage.addEventListener('pointerdown',e=>{
   if(e.target.closest('#dock,header,#card,#resetView,#info'))return;
   tapMkEl=e.target.closest?e.target.closest('.mk'):null;
   tapMk=!!tapMkEl;
   stage.setPointerCapture(e.pointerId);
+  tracked.add(e.pointerId);
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
   if(pts.size===2){const [a,b]=[...pts.values()];
     pinch={d:Math.hypot(a.x-b.x,a.y-b.y),zoom,mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}};}
@@ -1446,6 +1447,7 @@ stage.addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
+  if(!tracked.delete(e.pointerId))return;   // only pointers that began on the map count as taps
   pts.delete(e.pointerId);
   if(pts.size<2)pinch=null;
   if(e.type==='pointerup'&&!moved&&pts.size===0){
