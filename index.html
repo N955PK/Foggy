@@ -1684,7 +1684,8 @@ async function loadAlertWest(){
   const out=[];
   for(const c of (got.cams.data||[])){
     if(+c.pv||+c.off)continue;
-    if(/caltrans/i.test(String(c.sp||''))||/caltrans/i.test(String(c.pr||'')))continue;
+    const org=String(c.sp||'')+' '+String(c.pr||'');
+    if(/caltrans|wsdot|odot|tripcheck|department of transportation|\bdot\b/i.test(org))continue;
     const L=locs.get(c.lid);
     if(!L||+L.lp)continue;
     const lat=+L.lat,lon=+L.lon;
