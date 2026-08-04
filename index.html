@@ -197,7 +197,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
       <span class="dock-label">SAT</span>
       <div class="seg" id="segReg"><button data-r="west" aria-pressed="true">WEST</button><button data-r="usa">USA</button></div>
       <span class="tgls">
-      <button class="icon-btn" id="tglHD" aria-pressed="false" title="1 km HD loop — heavier data" style="width:auto;padding:0 8px;font-family:var(--mono);font-size:10px;letter-spacing:.05em">HD</button>
+
       <button class="icon-btn" id="tglLines" aria-pressed="true" aria-label="State and coast lines" title="Boundaries">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M1.5 3.5l4-1.6 5 1.6 4-1.6v10.6l-4 1.6-5-1.6-4 1.6zM5.5 1.9v10.6M10.5 3.5v10.6"/></svg></button>
       <button class="icon-btn" id="tglApt" aria-pressed="false" aria-label="Airport weather layer" title="Airports">
@@ -239,7 +239,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
     <p><b>Airports</b> show live visibility from official aviation weather reports — dots are colored by <b>flight category</b> from the live report — <span style="color:var(--vfr)">VFR</span>, <span style="color:var(--mvfr)">MVFR</span>, <span style="color:var(--ifr)">IFR</span>, <span style="color:var(--lifr)">LIFR</span> (ceiling and visibility combined, standard aviation thresholds). Tap one for the full report. <b>Webcams</b> are ridge-top sky cameras from the ALERTCalifornia / ALERTWest network — each icon is a wedge rotated to the camera's live pointing direction (zooming in reveals more cameras) — mountaintop views over the marine layer and valley fog — tinted by the visibility at the nearest reporting airport; tap for the live image.</p>
     <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
     <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
-    <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
+    <p><b>Resolution:</b> the tile engine streams whatever your zoom needs automatically, up to ½&nbsp;km. If the app ever falls back to the legacy whole-frame feed, that loop runs at 1&nbsp;km with pause-to-sharpen up to ½&nbsp;km.</p>
     <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Shelter Cove airport &amp; headlands cams by <a href="http://northcoastaviation.com/" target="_blank" rel="noopener">NorthCoastAviation</a> / Inn of the Lost Coast, and ridge-top sky cams from <a href="https://alertcalifornia.org/" target="_blank" rel="noopener">ALERTCalifornia | UC San Diego</a> via ALERTWest (many PG&amp;E-sponsored) — mountaintop views that show the fog deck from above. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
@@ -268,9 +268,9 @@ const PRODUCTS={geo:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'GeoColor'},
                 fire:{dir:'GEOCOLOR',token:'GEOCOLOR',label:'Fire Temperature'}};
 const BASE_W=2500, BASE_H=1500, HIRES_SCALE=2;
 const SIZE_PREF=[2500,1250,5000,625];
-let hd=false, hdPlus=false;
+let hd=true, hdPlus=false;              // legacy engine always runs 1 km
 function sizePrefs(){return (hd&&!hdPlus)?[5000,2500,1250,625]:SIZE_PREF;}
-function maxFrames(){return hdPlus?12:hd?18:MAXF;}
+function maxFrames(){return engine==='tiles'?MAXF:(hdPlus?12:hd?18:MAXF);}
 const MAXF=30, HOLD_MS=1150, FPS={0.5:4.5,1:9,2:16};
 const IMG_REFRESH=5*60*1000, WX_REFRESH=10*60*1000;
 const HIRES_MIN_ZOOM=1.25;
@@ -790,7 +790,7 @@ async function reload(fullVeil){
   }
   reloadStar(fullVeil,run);
 }
-function syncEngineUI(){$('tglHD').style.display=engine==='tiles'?'none':'grid';}
+function syncEngineUI(){}
 async function reloadStar(fullVeil,run){
   try{
     if(fullVeil&&!frames.length)
@@ -1337,7 +1337,7 @@ function syncHUD(){
   }
   const f=frames[idx]; if(!f)return;
   $('frameTime').textContent=fmtTime.format(f.t);
-  const hd2=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?(hires.size>=10000?' · HD ½ km':' · HD 1 km'):(hdPlus?' · ½ km loop':hd?' · 1 km loop':'');
+  const hd2=(!playing&&hires.img&&hires.stamp===f.stamp&&mode==='geo'&&zoom>=HIRES_MIN_ZOOM)?(hires.size>=10000?' · HD ½ km':' · HD 1 km'):(engine==='star'&&hd?' · 1 km loop':'');
   $('frameSub').textContent=`${fmtDate.format(f.t)} · ${PROJ.tag} · ${PRODUCTS[mode].label}${hd2}`;
   const last=frames[frames.length-1];
   if(tmode==='replay'){
@@ -1919,6 +1919,7 @@ async function switchRegion(v){
     $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t==='live'));
   }
   region=v; PROJ=REGIONS[v];
+  engine='tiles'; veilForced=false;      // each region gets a fresh shot at the tile engine
   TILE.ready=false; tTimes=[]; tTimesDeep=[]; scanSS=null; timesMode='json'; resetTiles(); firePerimPath=null; statesPath=null;
   computeCrop(); recomputePositions(); bmPaths=null; fogCanvas=null; fogT=-1;
   hires={stamp:null,img:null}; hiresCache.clear(); hiresDead=false;
@@ -1978,17 +1979,7 @@ wireToggle($('tglApt'),'apt'); wireToggle($('tglCam'),'cam');
 wireToggle($('tglFire'),'fire');
 $('tglFire').addEventListener('click',()=>{if(layers.fire)fetchFires();draw();});
 setInterval(()=>{if(layers.fire&&!document.hidden)fetchFires();},10*60*1000);
-$('tglHD').onclick=()=>{
-  if(!hd&&!hdPlus){hd=true;toast('HD loop: 1 km frames everywhere \u2014 heavier data');}
-  else if(hd&&!hdPlus){
-    if(zoom<1.8){hd=false;toast('standard loop: 2 km frames');}
-    else{hdPlus=true;toast('HD+ : \u00bd km frames over this area \u2014 heavy data, 12 frames');}
-  }else{hd=false;hdPlus=false;toast('standard loop: 2 km frames');}
-  const b=$('tglHD');
-  b.textContent=hdPlus?'HD+':'HD';
-  b.setAttribute('aria-pressed',hd||hdPlus);
-  hiresCache.clear();hires={stamp:null,img:null};ovRun++;
-  if(tmode==='replay')loadReplay(); else if(tmode==='live')reload(false);};
+
 
 $('fsBtn').onclick=()=>{try{
   if(document.fullscreenElement)document.exitFullscreen();
