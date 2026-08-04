@@ -91,6 +91,8 @@ header .brand,#status{pointer-events:auto}
 .icon-btn svg{width:15px;height:15px;fill:currentColor}
 .icon-btn[aria-pressed="true"]{color:#0a0e13;background:var(--ink);border-color:var(--ink)}
 .tgls{display:flex;gap:9px;align-items:center}
+body.now #ruler,body.now #playBtn svg{opacity:.35}
+body.now #ruler{pointer-events:none}
 .spacer{flex:1}
 .dock-label{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.14em;margin-right:-3px}
 #hourSel{flex:1;min-width:80px;accent-color:var(--accent);height:22px}
@@ -187,7 +189,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
       <div id="ruler" aria-label="Timeline"><div class="track"></div><div class="fill"></div><div id="ticks"></div><div class="thumb"></div></div>
     </div>
     <div class="row">
-      <div class="seg" id="segTime"><button data-t="live" aria-pressed="true">LIVE</button><button data-t="replay">REPLAY</button><button data-t="outlook">OUTLOOK</button></div>
+      <div class="seg" id="segTime"><button data-t="live" aria-pressed="true">LIVE</button><button data-t="now">CURRENT</button><button data-t="replay">REPLAY</button><button data-t="outlook">OUTLOOK</button></div>
       <span class="dock-label">SPAN</span>
       <div class="seg" id="segHours"><button data-h="2">2h</button><button data-h="4" aria-pressed="true">4h</button><button data-h="8">8h</button></div>
       <span class="dock-label">SPEED</span>
@@ -240,7 +242,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
     <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
     <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
     <p><b>Resolution:</b> the tile engine streams whatever your zoom needs automatically, up to ½&nbsp;km. If the app ever falls back to the legacy whole-frame feed, that loop runs at 1&nbsp;km with pause-to-sharpen up to ½&nbsp;km.</p>
-    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
+    <p><b>Outlook</b> switches the timeline to the <b>next 18 hours</b> and paints a <b>forecast fog picture</b> on the map: bright white where NOAA's short-range models (HRRR/GFS, via <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>, CC BY 4.0) predict surface fog, and a soft gray wash where they predict the marine-layer / low-stratus deck. Drag the timeline to watch tonight's fog form and burn off before it happens. Airport dots recolor to the official NWS terminal-forecast (TAF) visibility as an independent cross-check, with an "FG" tag where fog is explicitly forecast — TAFs are only issued for larger fields, so some airports show gray. Forecasts are models, not measurements. The map-lines toggle draws <b>state and coast boundaries</b> over the raw satellite tiles (they're not baked into the imagery) in both WEST and USA views. In outlook, the <b>play button animates the forecast</b> — the fog field sweeps through the next 18 hours on a clean vector map. <b>Current</b> pins the single newest frame — no playback, auto-advancing as new scans publish, rendered at the sharpest tile level your zoom allows. <b>Replay</b> re-runs actual imagery from NOAA's rolling archive (roughly the last 2–3 days) — pick a day and start hour. The <b>SAT switch</b> swaps between GOES-West's Pacific view (sharpest over the coast) and GOES-East's whole-country view; the two satellites photograph from different points in space, so each is shown in its own true perspective.</p>
     <p class="keys">pinch / scroll · zoom&nbsp;&nbsp;&nbsp;drag · pan<br>double-tap · zoom in / out&nbsp;&nbsp;&nbsp;tap map · hide / show controls<br>space · play / pause&nbsp;&nbsp;&nbsp;← → · step frames</p>
     <p>Imagery: NOAA / NESDIS &amp; <a href="https://rammb-slider.cira.colostate.edu/" target="_blank" rel="noopener">CIRA SLIDER</a> tiles (GeoColor by CIRA &amp; NOAA). Fire data: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">NIFC WFIGS</a>. Weather: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>. Cameras: Shelter Cove airport &amp; headlands cams by <a href="http://northcoastaviation.com/" target="_blank" rel="noopener">NorthCoastAviation</a> / Inn of the Lost Coast, and ridge-top sky cams from <a href="https://alertcalifornia.org/" target="_blank" rel="noopener">ALERTCalifornia | UC San Diego</a> via ALERTWest (many PG&amp;E-sponsored) — mountaintop views that show the fog deck from above. Informational only — not for navigation, aviation, or safety-of-life use. A West Coast homage to <a href="https://fog.today" target="_blank" rel="noopener">fog.today</a>.</p>
   </div></div>
@@ -774,7 +776,7 @@ async function reload(fullVeil){
       const times=await tileTimes(false);
       if(run!==loadRun)return;
       let list=windowed(times);
-      if(tmode==='live')list=gateTail(list);
+      if(tmode==='live'||tmode==='now')list=gateTail(list);
       if(list.length<2)throw 0;
       frames=list; idx=frames.length-1;
       warmLoopBase();
@@ -817,7 +819,7 @@ async function reloadStar(fullVeil,run){
   }
 }
 async function quietRefresh(){
-  if(document.hidden||tmode!=='live')return;
+  if(document.hidden||(tmode!=='live'&&tmode!=='now'))return;
   if(engine==='tiles'){
     try{
       const times=await tileTimes(false);
@@ -1187,13 +1189,24 @@ async function setTMode(v){
     $('segTime').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.t===tmode));
     return;
   }
+  const prev=tmode;
   tmode=v;
+  document.body.classList.toggle('now',v==='now');
   $('replayBar').style.display=v==='replay'?'flex':'none';
   if(v==='outlook'){ enterOutlook(); return; }
   restyleMarkers();
   if(v==='replay'){
     try{ if(engine==='tiles'){if(!tTimesDeep.length)await tileTimes(true);} else if(!lastListing.length)await listFrames(); }catch(e){}
     buildDayChips(); loadReplay();
+  }else if(v==='now'){
+    setPlaying(false);
+    if(prev==='replay'||!frames.length){reload(false);}
+    else{
+      idx=Math.max(0,frames.length-1);
+      hires={stamp:null,img:null};
+      if(engine!=='tiles')scheduleHires();
+      buildRuler(); draw();
+    }
   }else{ // live
     reload(false); setPlaying(!reduceMotion);
   }
@@ -1248,7 +1261,7 @@ function draw(){
         const g=frames.find(x=>x.stamp===lastGoodStamp);
         if(g)drawTiles(g,v);
       }
-      prefetchAhead(v);
+      if(tmode!=='now')prefetchAhead(v);
     }else if(f.bmp){
       ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
       ctx.drawImage(f.bmp,v.tx,v.ty,CROP.w*v.s,CROP.h*v.s);
@@ -1343,10 +1356,11 @@ function syncHUD(){
   if(tmode==='replay'){
     chip.classList.remove('on'); $('liveTxt').textContent='REPLAY';
   }else{
+    const lbl=tmode==='now'?'CURRENT':'LIVE';
     const ageMin=Math.max(0,Math.round((Date.now()-last.t)/60000));
     const live=ageMin<=16;
     chip.classList.toggle('on',live);
-    $('liveTxt').textContent=live?`LIVE · ${ageMin}m ago`:`DELAYED · ${ageMin}m`;
+    $('liveTxt').textContent=live?`${lbl} · ${ageMin}m ago`:`DELAYED · ${ageMin}m`;
   }
   const t0=frames[0].t,t1=last.t,span=Math.max(1,t1-t0);
   const x=((f.t-t0)/span*100).toFixed(3)+'%';
@@ -1383,6 +1397,7 @@ function buildRuler(){
 }
 let scrubResume=false;
 function seekFromEvent(e){
+  if(tmode==='now')return;
   const r=ruler.getBoundingClientRect();
   const frac=Math.min(1,Math.max(0,(e.clientX-r.left)/r.width));
   if(tmode==='outlook'){
@@ -1899,7 +1914,10 @@ function toggleZen(){document.body.classList.toggle('zen');}
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{
   if(e.target===cv||(e.target.closest&&e.target.closest('#lyr')))return; wake();}));
 
-$('playBtn').onclick=()=>setPlaying(!playing);
+$('playBtn').onclick=()=>{
+  if(tmode==='now'){setTMode('live');return;}   // play from CURRENT jumps to the live loop
+  setPlaying(!playing);
+};
 $('resetView').onclick=resetView;
 function segWire(el,attr,fn){el.querySelectorAll('button').forEach(b=>b.onclick=()=>{
   el.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); fn(b.dataset[attr]); wake();});}
