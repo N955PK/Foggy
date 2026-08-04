@@ -225,7 +225,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
     <button id="infoClose">close</button>
     <h2>fog<span class="slash">/</span>west</h2>
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
-    <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are ridge-top sky cameras from the ALERTCalifornia / ALERTWest network — mountaintop views over the marine layer and valley fog — tinted by the visibility at the nearest reporting airport; tap for the live image.</p>
+    <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are ridge-top sky cameras from the ALERTCalifornia / ALERTWest network — each icon is a wedge rotated to the camera's live pointing direction (zooming in reveals more cameras) — mountaintop views over the marine layer and valley fog — tinted by the visibility at the nearest reporting airport; tap for the live image.</p>
     <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
     <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
     <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
@@ -1149,6 +1149,14 @@ cv.addEventListener('wheel',e=>{e.preventDefault();
 const lyr=$('lyr');
 const mkIndex=[];
 const camSvg='<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 4.2h8.2c.7 0 1.2.5 1.2 1.2v5.2c0 .7-.5 1.2-1.2 1.2H1.5c-.7 0-1.2-.5-1.2-1.2V5.4c0-.7.5-1.2 1.2-1.2zm10.4 2.6 3.2-1.9c.3-.2.6 0 .6.4v5.4c0 .4-.3.6-.6.4l-3.2-1.9z"/></svg>';
+function wedgeSvg(az,fov){
+  const h=Math.min(45,Math.max(14,(fov||60)/2))*Math.PI/180, R=9;
+  const x1=(R*Math.sin(-h)).toFixed(2), y1=(-R*Math.cos(-h)).toFixed(2);
+  const x2=(R*Math.sin(h)).toFixed(2),  y2=(-R*Math.cos(h)).toFixed(2);
+  return `<svg viewBox="-10 -11 20 22" style="width:19px;height:19px;transform:rotate(${az}deg)">`+
+    `<path d="M0 0 L${x1} ${y1} A ${R} ${R} 0 0 1 ${x2} ${y2} Z" fill="currentColor" opacity=".45"/>`+
+    `<circle r="2.6" fill="currentColor"/></svg>`;
+}
 function visClass(sm){return sm==null?'vna':sm<1?'v0':sm<3?'v1':sm<6?'v2':'v3';}
 function visLabel(sm){return sm==null?'—':sm>=10?'10+':sm>=3?String(Math.round(sm)):sm.toFixed(1);}
 
@@ -1170,7 +1178,9 @@ function addCamMarkers(list){
   for(const c of list){
     const [u,v]=llToWorld(c.lat,c.lon);
     const el=document.createElement('button');
-    el.className='mk cam vna'; el.innerHTML=camSvg; el.title=c.n;
+    el.className='mk cam vna';
+    el.innerHTML=(c.az!=null)?wedgeSvg(c.az,c.fov):camSvg;
+    el.title=c.n;
     el.addEventListener('pointerdown',e=>e.stopPropagation());
     el.addEventListener('click',()=>openCard('cam',c));
     lyr.appendChild(el);
@@ -1211,14 +1221,18 @@ function updateMarkers(v){
   v=v||view();
   const showApt=layers.apt, showCam=layers.cam,
         showLbl=tmode==='outlook'?v.s>=1.05:v.s>=1.6;
+  const camLv=v.s>=8?99:v.s>=4.5?2:v.s>=2.2?1:0;
   for(const m of mkIndex){
-    const on=m.type==='apt'?showApt:m.type==='fire'?layers.fire:showCam;
+    let on=m.type==='apt'?showApt:m.type==='fire'?layers.fire:showCam;
+    if(on&&m.type==='cam'&&m.ref.lv!=null&&m.ref.lv>camLv)on=false;
     const sx=m.u*v.s+v.tx, sy=m.v*v.s+v.ty;
     const vis=on&&sx>-60&&sx<v.W+60&&sy>-40&&sy<v.H+40;
-    m.el.style.display=vis?'flex':'none';
+    if(m._v!==vis){m._v=vis;m.el.style.display=vis?'flex':'none';}
     if(!vis)continue;
-    m.el.style.transform=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-6px,-50%)':'translate(-50%,-50%)'}`;
-    if(m.type==='apt'){const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
+    const tr=`translate(${sx}px,${sy}px) ${m.type==='apt'?'translate(-6px,-50%)':'translate(-50%,-50%)'}`;
+    if(m._t!==tr){m._t=tr;m.el.style.transform=tr;}
+    if(m.type==='apt'&&m._l!==showLbl){m._l=showLbl;
+      const b=m.el.querySelector('b'); if(b)b.style.display=showLbl?'':'none';}
   }
   $('legend').style.display=(layers.apt||layers.cam)?'flex':'none';
 }
@@ -1345,18 +1359,18 @@ function drawFirePerims(v){
 const AW_HOSTS=['https://api.cdn.prod.alertwest.com','https://alertwest.live'];
 const AW_IMG='https://img.cdn.prod.alertwest.com/data/img';
 let alertCams=[], awFetched=0, awLoading=false, awDead=false, awRetried=false;
-function thinFair(list,cap){
-  let picked=list;
-  for(const cell of [3,2.4,2,1.6]){       // ~1/3° cells, coarsening until it fits
-    const seen=new Map();
+function tagCamLevels(list){
+  // coastal cams win their grid cells at every density level
+  list.sort((a,b)=>coastDistKm(a.lat,a.lon)-coastDistKm(b.lat,b.lon));
+  for(const c of list)c.lv=99;                 // 99 = only at deep zoom
+  [3,6,12].forEach((cell,li)=>{                // ~1/3°, 1/6°, 1/12° cells
+    const seen=new Set();
     for(const c of list){
       const k=Math.round(c.lat*cell)+':'+Math.round(c.lon*cell);
-      if(!seen.has(k))seen.set(k,c);
+      if(!seen.has(k)){seen.add(k);if(c.lv===99)c.lv=li;}
     }
-    picked=[...seen.values()];
-    if(picked.length<=cap)break;
-  }
-  return picked;
+  });
+  return list;
 }
 async function loadAlertWest(){
   if(awLoading||awDead)return;
@@ -1392,10 +1406,12 @@ async function loadAlertWest(){
     if(!m)continue;
     const d=new Date(+m[1]*1000);
     out.push({n:String(c.cn||'sky cam').replace(/_/g,' '),lat,lon,sky:true,
+      az:isFinite(+c.p)?((+c.p%360)+360)%360:null,
+      fov:isFinite(+c.fov)?+c.fov:null,
       img:`${AW_IMG}/${c.id}/${d.getUTCFullYear()}/${p2(d.getUTCMonth()+1)}/${p2(d.getUTCDate())}/${c.img}`,
       src:(c.sp?c.sp+' · ':'')+'ALERTCalifornia / ALERTWest'});
   }
-  const thin=thinFair(out,260);
+  const thin=tagCamLevels(out);
   for(let i=mkIndex.length-1;i>=0;i--){
     if(mkIndex[i].type==='cam'&&mkIndex[i].ref.sky){mkIndex[i].el.remove();mkIndex.splice(i,1);}
   }
@@ -1505,6 +1521,7 @@ function renderCard(){
     const bust=c.img+(c.img.includes('?')?'&':'?')+'t='+Date.now();
     B.innerHTML=`<h3>${esc(c.n)}</h3><div class="sub">${esc(c.src)}${c.route?' · '+esc(c.route):''}</div>
       <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok&&o.vis!=null?visLabel(o.vis)+' sm at '+c.apt.id:'nearby visibility unknown'}</div>
+      ${c.az!=null?`<div class="grid"><span>looking <b>${compass(c.az)} · ${Math.round(c.az)}°</b></span><span>field of view <b>${c.fov?Math.round(c.fov)+'°':'—'}</b></span></div>`:''}
       <img alt="${esc(c.n)}" src="${bust}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
       <div style="display:none;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px">camera image unavailable right now</div>
       <div class="foot"><span>live still · refreshes ~1–5 min</span><button id="camRefresh">refresh</button></div>`;
