@@ -11,6 +11,7 @@
   --bg:#0a0e13; --ink:#e9edf1; --dim:#8b98a5; --line:rgba(233,237,241,.14);
   --accent:#e8542f;
   --v0:#ff5c39; --v1:#ffa32e; --v2:#e8d34f; --v3:#39d0a4; --vna:#5a6672;
+  --vfr:#39d07f; --mvfr:#3aa8ff; --ifr:#ff4d4d; --lifr:#d95ce8;
   --glass:rgba(10,14,19,.58);
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -37,6 +38,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .mk.v3 i{background:var(--v3)} .mk.vna i{background:var(--vna)}
 .mk.v0 svg{color:var(--v0)} .mk.v1 svg{color:var(--v1)} .mk.v2 svg{color:var(--v2)}
 .mk.v3 svg{color:var(--v3)} .mk.vna svg{color:var(--vna)}
+.mk.vfr i{background:var(--vfr)} .mk.mvfr i{background:var(--mvfr)}
+.mk.ifr i{background:var(--ifr)} .mk.lifr i{background:var(--lifr)}
+.mk.vfr svg{color:var(--vfr)} .mk.mvfr svg{color:var(--mvfr)}
+.mk.ifr svg{color:var(--ifr)} .mk.lifr svg{color:var(--lifr)}
 .mk.fire svg{filter:drop-shadow(0 0 4px rgba(255,92,57,.65)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
 .mk{touch-action:none}
 .mk.sel{z-index:6}
@@ -211,7 +216,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
       <input id="hourSel" type="range" min="0" max="21" step="1" value="6" aria-label="Replay start hour">
       <span id="replayLbl" class="dock-label" style="letter-spacing:.03em"></span>
     </div>
-    <div id="legend"><span class="dock-label" style="margin-right:2px">VIS</span><span><i style="background:var(--v3)"></i>≥6</span><span><i style="background:var(--v2)"></i>3–6</span><span><i style="background:var(--v1)"></i>1–3</span><span><i style="background:var(--v0)"></i>&lt;1 sm</span></div>
+    <div id="legend"><span class="dock-label" style="margin-right:2px">CAT</span><span><i style="background:var(--vfr)"></i>VFR</span><span><i style="background:var(--mvfr)"></i>MVFR</span><span><i style="background:var(--ifr)"></i>IFR</span><span><i style="background:var(--lifr)"></i>LIFR</span></div>
   </div>
 
   <div id="card"><button id="cardX" aria-label="Close">✕</button><div id="cardBody"></div></div>
@@ -231,7 +236,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
     <button id="infoClose">close</button>
     <h2>fog<span class="slash">/</span>west</h2>
     <p>A live loop of <b>fog and low cloud along the entire West Coast</b> — Washington, Oregon, and California — from NOAA's <b>GOES-18 (GOES-West)</b> satellite's Pacific U.S. scan. New frames arrive about every 5 minutes; the page refreshes itself. <b>GeoColor</b> shows natural color by day and infrared at night; <b>IR</b> is the 3.9&nbsp;µm shortwave band forecasters use to find fog in the dark.</p>
-    <p><b>Airports</b> show live visibility from official aviation weather reports — the dot color is the reported visibility in statute miles (green ≥6, yellow 3–6, orange 1–3, red &lt;1: dense fog). Tap one for the full report. <b>Webcams</b> are ridge-top sky cameras from the ALERTCalifornia / ALERTWest network — each icon is a wedge rotated to the camera's live pointing direction (zooming in reveals more cameras) — mountaintop views over the marine layer and valley fog — tinted by the visibility at the nearest reporting airport; tap for the live image.</p>
+    <p><b>Airports</b> show live visibility from official aviation weather reports — dots are colored by <b>flight category</b> from the live report — <span style="color:var(--vfr)">VFR</span>, <span style="color:var(--mvfr)">MVFR</span>, <span style="color:var(--ifr)">IFR</span>, <span style="color:var(--lifr)">LIFR</span> (ceiling and visibility combined, standard aviation thresholds). Tap one for the full report. <b>Webcams</b> are ridge-top sky cameras from the ALERTCalifornia / ALERTWest network — each icon is a wedge rotated to the camera's live pointing direction (zooming in reveals more cameras) — mountaintop views over the marine layer and valley fog — tinted by the visibility at the nearest reporting airport; tap for the live image.</p>
     <p><b>Imagery engine:</b> frames stream as <b>map tiles from CIRA's SLIDER service</b> — only the pixels in your viewport download, at the resolution your zoom needs, up to the satellite's native ½&nbsp;km. Zoom in <i>while the loop plays</i> and it sharpens automatically; replay reaches as far back as the tile archive holds (typically ~2–3 weeks). If the tile service is unreachable, the app falls back to NOAA's whole-frame feed.</p>
     <p><b>fire/west:</b> the <b>Fire</b> view switches the imagery to the Fire Temperature RGB (hotspots glow through smoke), and the 🔥 layer overlays official <b>NIFC/WFIGS</b> incidents — flame size by acreage, red = active, amber = mostly contained — with fire perimeters outlined where published. Tap a flame for acres, containment, and discovery date. Smoke itself is visible directly in GeoColor imagery.</p>
     <p><b>Resolution (legacy mode only):</b> the loop plays at 2&nbsp;km by default; the <b>HD button</b> cycles the moving loop through 1&nbsp;km frames everywhere (HD) and — when you're zoomed in — <b>½&nbsp;km frames over the area you're viewing</b> (HD+, 12 frames, very heavy data; re-tap through the cycle after panning somewhere new). Best on Wi-Fi. Pausing sharpens the current frame to 1&nbsp;km regardless, and pausing while zoomed past ~4× pulls the ½&nbsp;km frame where NOAA publishes it — the badge by the frame time shows the tier.</p>
@@ -959,25 +964,28 @@ function pvVis(v){
 function tafAt(id,T){
   const t=tafs[id]; if(!t)return null;
   if(T<t.from-30*60000||T>t.to)return null;
-  let vis=null,wx='';
+  let vis=null,wx='',ceil=null;
   for(const g of t.fcsts){
     const ch=g.fcstChange;
     if((ch==null||ch==='FM')&&g.probability==null&&g.timeFrom*1000<=T){
       const v=pvVis(g.visib); if(v!=null)vis=v;
       wx=g.wxString||'';
+      ceil=ceilOf(g.clouds).ceil;
     }else if(ch==='BECMG'&&g.timeFrom*1000<=T){
       const v=pvVis(g.visib); if(v!=null)vis=v;
       if(g.wxString)wx=g.wxString;
+      if(g.clouds&&g.clouds.length)ceil=ceilOf(g.clouds).ceil;
     }
   }
   for(const g of t.fcsts){
     const ch=g.fcstChange||'';
     if((ch==='TEMPO'||ch.indexOf('PROB')===0)&&g.timeFrom*1000<=T&&T<g.timeTo*1000){
       const v=pvVis(g.visib); if(v!=null&&(vis==null||v<vis))vis=v;
+      const c2=ceilOf(g.clouds).ceil; if(c2!=null&&(ceil==null||c2<ceil))ceil=c2;
       if(g.wxString)wx=wx?wx+' '+g.wxString:g.wxString;
     }
   }
-  return {vis,wx};
+  return {vis,wx,ceil};
 }
 function enterOutlook(){
   setPlaying(false);
@@ -1394,10 +1402,11 @@ ruler.addEventListener('pointermove',e=>{if(ruler.hasPointerCapture(e.pointerId)
 ruler.addEventListener('pointerup',()=>{if(scrubResume){holdUntil=performance.now()+700;setPlaying(true);}else scheduleHires();});
 
 /* ---------------- gestures ---------------- */
-const pts=new Map(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false;
+const pts=new Map(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false,tapMkEl=null;
 stage.addEventListener('pointerdown',e=>{
   if(e.target.closest('#dock,header,#card,#resetView,#info'))return;
-  tapMk=!!(e.target.closest&&e.target.closest('.mk'));
+  tapMkEl=e.target.closest?e.target.closest('.mk'):null;
+  tapMk=!!tapMkEl;
   stage.setPointerCapture(e.pointerId);
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
   if(pts.size===2){const [a,b]=[...pts.values()];
@@ -1425,6 +1434,9 @@ function endPointer(e){
   pts.delete(e.pointerId);
   if(pts.size<2)pinch=null;
   if(e.type==='pointerup'&&!moved&&pts.size===0){
+    if(tapMk&&tapMkEl){const el=tapMkEl;tapMkEl=null;tapMk=false;
+      if(!el._clk){el._clk=1;setTimeout(()=>{el._clk=0;},400);el.click();}
+      return;}
     const now=performance.now();
     if(now-lastTap.t<300&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30){
       lastTap.t=0; zoom>homeZ*1.35?goHome():zoomAt(e.clientX,e.clientY,Math.min(18,homeZ*2.6));
@@ -1454,6 +1466,28 @@ function wedgeSvg(az,fov){
     `<circle r="2.8" fill="currentColor"/></svg>`;
 }
 function visClass(sm){return sm==null?'vna':sm<1?'v0':sm<3?'v1':sm<6?'v2':'v3';}
+function fltCat(vis,ceil){
+  if(vis==null&&ceil==null)return null;
+  const v=vis==null?99:vis, c=ceil==null?99999:ceil;
+  if(c<500||v<1)return 'lifr';
+  if(c<1000||v<3)return 'ifr';
+  if(c<=3000||v<=5)return 'mvfr';
+  return 'vfr';
+}
+function catClass(vis,ceil){const k=fltCat(vis,ceil);return k||'vna';}
+function ceilOf(layers){
+  let ceil=null,txt=null;
+  for(const L of (layers||[])){
+    const amt=String(L.amount||L.cover||'').toUpperCase();
+    if(amt!=='BKN'&&amt!=='OVC'&&amt!=='VV')continue;
+    let b=(L.base&&typeof L.base==='object')?L.base.value:L.base;
+    if(b==null)continue;
+    b=+b; if(!isFinite(b))continue;
+    const ft=(L.base&&L.base.unitCode&&/m$/.test(String(L.base.unitCode)))?b*3.28084:b;
+    if(ceil==null||ft<ceil){ceil=ft;txt=amt+' '+(Math.round(ft/100)*100)+' ft';}
+  }
+  return {ceil,txt};
+}
 function visLabel(sm){return sm==null?'—':sm>=10?'10+':sm>=3?String(Math.round(sm)):sm.toFixed(1);}
 
 function buildAirportMarkers(){
@@ -1491,24 +1525,24 @@ function addCamMarkers(list){
 function restyleMarkers(){
   const useTaf=tmode==='outlook';
   for(const a of AIRPORTS){
-    let vis=null, extra='';
+    let vis=null, ceil=null, extra='';
     if(useTaf){
       const f=tafAt(a.id,olT);
-      if(f){vis=f.vis; if(/FG/.test(f.wx||''))extra=' FG';}
+      if(f){vis=f.vis; ceil=f.ceil; if(/FG/.test(f.wx||''))extra=' FG';}
     }else{
-      const o=obs[a.id]; if(o&&o.ok)vis=o.vis;
+      const o=obs[a.id]; if(o&&o.ok){vis=o.vis;ceil=o.ceil;}
     }
-    const cls=visClass(vis);
+    const cls=catClass(vis,ceil);
     if(a._mk){a._mk.className='mk apt '+cls+(openMk&&openMk.ref===a?' sel':'');
       a._mk.querySelector('b').textContent=((a.code||a.id.slice(1))+' '+(vis!=null?visLabel(vis)+'sm':'')+extra).trim();}
   }
   for(const c of cams){
-    let vis=null;
+    let vis=null,ceil=null;
     if(c.apt){
-      if(useTaf){const f=tafAt(c.apt.id,olT); vis=f?f.vis:null;}
-      else{const o=obs[c.apt.id]; vis=o&&o.ok?o.vis:null;}
+      if(useTaf){const f=tafAt(c.apt.id,olT); if(f){vis=f.vis;ceil=f.ceil;}}
+      else{const o=obs[c.apt.id]; if(o&&o.ok){vis=o.vis;ceil=o.ceil;}}
     }
-    if(c._mk)c._mk.className='mk cam '+visClass(vis)+(openMk&&openMk.ref===c?' sel':'');
+    if(c._mk)c._mk.className='mk cam '+catClass(vis,ceil)+(openMk&&openMk.ref===c?' sel':'');
   }
 }
 function updateMarkers(v){
@@ -1748,7 +1782,9 @@ async function fetchObsOne(a){
     const num=x=>x&&typeof x.value==='number'?x.value:null;
     const visM=num(p.visibility), tC=num(p.temperature), dC=num(p.dewpoint);
     const wKmh=num(p.windSpeed), wDir=num(p.windDirection);
+    const cl=ceilOf(p.cloudLayers);
     obs[a.id]={ok:true,
+      ceil:cl.ceil, ceilTxt:cl.txt,
       vis:visM==null?null:visM/1609.344,
       txt:p.textDescription||'',
       tC,dC,
@@ -1787,13 +1823,14 @@ function renderCard(){
     const a=openMk.ref;
     if(tmode==='outlook'){
       const f=tafAt(a.id,olT);
-      const cls=visClass(f?f.vis:null);
+      const cls=catClass(f?f.vis:null,f?f.ceil:null);
       const rows=[0,3,6,9,12,15,18].map(h=>{
         const T=olk0+h*3600000, g=tafAt(a.id,T);
-        return `<span>${h?'+'+h+'h':'now'} <b style="color:var(--${visClass(g?g.vis:null)})">${g&&g.vis!=null?visLabel(g.vis)+' sm':'—'}</b></span><span>${g&&g.wx?esc(g.wx):''}</span>`;
+        const gc=g?fltCat(g.vis,g.ceil):null;
+        return `<span>${h?'+'+h+'h':'now'} <b style="color:var(--${catClass(g?g.vis:null,g?g.ceil:null)})">${gc?gc.toUpperCase():'—'}${g&&g.vis!=null?' '+visLabel(g.vis)+'sm':''}</b></span><span>${g&&g.wx?esc(g.wx):''}</span>`;
       }).join('');
       B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.id} · NWS terminal forecast (TAF)</div>
-        <div class="big"><i style="background:var(--${cls})"></i>${f&&f.vis!=null?visLabel(f.vis)+' sm at '+fmtHM.format(olT):(tafs[a.id]?'—':'no TAF issued for this field')}</div>
+        <div class="big"><i style="background:var(--${cls})"></i>${f&&(f.vis!=null||f.ceil!=null)?((fltCat(f.vis,f.ceil)||'').toUpperCase()+(f.vis!=null?' · '+visLabel(f.vis)+' sm':'')+' at '+fmtHM.format(olT)):(tafs[a.id]?'—':'no TAF issued for this field')}</div>
         <div class="grid">${rows}</div>
         <div class="foot"><span>forecast visibility · statute miles</span><span></span></div>`;
       return;
@@ -1804,7 +1841,7 @@ function renderCard(){
         const d=Math.hypot((x.lat-a.lat)*110.6,(x.lon-a.lon)*111.3*Math.cos(a.lat*Math.PI/180));
         if(d<nd){nd=d;nb=x;}}
       const no=nb&&obs[nb.id];
-      const ncls=visClass(no&&no.ok?no.vis:null);
+      const ncls=catClass(no&&no.ok?no.vis:null,no&&no.ok?no.ceil:null);
       B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.code||a.id} · no on-field weather station</div>
         <div class="big"><i style="background:var(--vna)"></i>conditions not reported here</div>
         <div class="grid">
@@ -1817,11 +1854,13 @@ function renderCard(){
       return;
     }
     const o=obs[a.id];
-    const cls=visClass(o&&o.ok?o.vis:null);
+    const cls=catClass(o&&o.ok?o.vis:null,o&&o.ok?o.ceil:null);
+    const cat=o&&o.ok?fltCat(o.vis,o.ceil):null;
     const age=o&&o.time?Math.round((Date.now()-o.time)/60000):null;
     B.innerHTML=`<h3>${esc(a.n)}</h3><div class="sub">${a.id} · aviation weather (NWS)</div>
-      <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok&&o.vis!=null?visLabel(o.vis)+' sm visibility':'no recent report'}</div>
+      <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok?((cat||'—').toUpperCase()+(o.vis!=null?' · '+visLabel(o.vis)+' sm':'')):'no recent report'}</div>
       ${o&&o.ok?`<div class="grid">
+        <span>ceiling <b>${o.ceilTxt?esc(o.ceilTxt):'unlimited'}</b></span>
         <span>sky <b>${esc(o.txt||'—')}</b></span>
         <span>wind <b>${o.wKt!=null?compass(o.wDir)+' '+Math.round(o.wKt)+' kt':'—'}</b></span>
         <span>temp <b>${o.tC!=null?Math.round(o.tC*9/5+32)+'°F':'—'}</b></span>
@@ -1841,10 +1880,10 @@ function renderCard(){
       <div class="foot"><span>official interagency incident data</span><span></span></div>`;
   }else{
     const c=openMk.ref, o=c.apt&&obs[c.apt.id];
-    const cls=visClass(o&&o.ok?o.vis:null);
+    const cls=catClass(o&&o.ok?o.vis:null,o&&o.ok?o.ceil:null);
     const bust=c.img?(c.img+(c.img.includes('?')?'&':'?')+'t='+Date.now()):'';
     B.innerHTML=`<h3>${esc(c.n)}</h3><div class="sub">${esc(c.src)}${c.route?' · '+esc(c.route):''}</div>
-      <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok&&o.vis!=null?visLabel(o.vis)+' sm at '+c.apt.id:'nearby visibility unknown'}</div>
+      <div class="big"><i style="background:var(--${cls})"></i>${o&&o.ok?((fltCat(o.vis,o.ceil)||'—').toUpperCase()+' at '+c.apt.id):'nearby conditions unknown'}</div>
       ${c.az!=null?`<div class="grid"><span>looking <b>${compass(c.az)} · ${Math.round(c.az)}°</b></span><span>field of view <b>${c.fov?Math.round(c.fov)+'°':'—'}</b></span></div>`:''}
       ${c.img?`<img alt="${esc(c.n)}" src="${bust}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
       <div style="display:none;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px">camera image unavailable right now${c.link?' — try the source link below':''}</div>`:`
