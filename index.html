@@ -126,7 +126,8 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
 #card img{width:100%;border-radius:9px;margin-top:10px;background:#0a0e13;min-height:120px}
 #card .foot{font-family:var(--mono);font-size:9.5px;color:var(--dim);margin-top:8px;display:flex;justify-content:space-between;align-items:center}
 #cardX{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);color:var(--dim);font-size:12px;line-height:1}
-#camRefresh{font-family:var(--mono);font-size:10px;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+#camRefresh,#camBig{font-family:var(--mono);font-size:10px;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+#camBig{margin-right:8px}
 
 /* ---- veil / info ---- */
 #veil{position:absolute;inset:0;z-index:10;background:var(--bg);display:grid;place-items:center;overflow:hidden;
@@ -161,6 +162,13 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
 #infoClose{position:sticky;float:right;top:0;font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
 @media (max-width:560px){#frameTime{font-size:15px} #dock{left:8px;right:8px}}
 @media (min-width:900px){#card{width:min(680px,80vw)} #card img{max-height:60vh;object-fit:contain;background:#05080b}}
+#lightbox{position:absolute;inset:0;z-index:40;background:rgba(4,7,10,.95);display:none;place-items:center}
+#lightbox.open{display:grid}
+#lbImg{max-width:100vw;max-height:100vh;object-fit:contain}
+#lbCap{position:absolute;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));text-align:center;
+  font-family:var(--mono);font-size:11px;color:var(--dim);pointer-events:none;text-shadow:0 1px 3px #000}
+#lbX{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--line);background:rgba(10,14,19,.7);color:var(--ink);font-size:15px}
 @media (min-width:1024px){#dock{max-width:1180px}}
 </style>
 </head>
@@ -234,6 +242,8 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
       <div id="errBox"><p id="errTxt"></p><button id="retryBtn">RETRY</button></div>
     </div>
   </div>
+
+  <div id="lightbox"><img id="lbImg" alt=""><div id="lbCap"></div><button id="lbX" aria-label="Close">✕</button></div>
 
   <div id="info"><div id="infoCard">
     <button id="infoClose">close</button>
@@ -1420,7 +1430,7 @@ ruler.addEventListener('pointerup',()=>{if(scrubResume){holdUntil=performance.no
 /* ---------------- gestures ---------------- */
 const pts=new Map(), tracked=new Set(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false,tapMkEl=null;
 stage.addEventListener('pointerdown',e=>{
-  if(e.target.closest('#dock,header,#card,#resetView,#info'))return;
+  if(e.target.closest('#dock,header,#card,#resetView,#info,#lightbox'))return;
   tapMkEl=e.target.closest?e.target.closest('.mk'):null;
   tapMk=!!tapMkEl;
   stage.setPointerCapture(e.pointerId);
@@ -1467,7 +1477,7 @@ function endPointer(e){
 }
 stage.addEventListener('pointerup',endPointer);
 stage.addEventListener('pointercancel',endPointer);
-stage.addEventListener('wheel',e=>{if(e.target.closest('#dock,header,#card,#info'))return;e.preventDefault();
+stage.addEventListener('wheel',e=>{if(e.target.closest('#dock,header,#card,#info,#lightbox'))return;e.preventDefault();
   zoomAt(e.clientX,e.clientY,zoom*Math.exp(-e.deltaY*0.0016));},{passive:false});
 
 /* ---------------- markers & layers ---------------- */
@@ -1834,6 +1844,14 @@ function closeCard(){
   openMk=null; $('card').classList.remove('open');
 }
 $('cardX').onclick=closeCard;
+function openLightbox(c){
+  if(!c||!c.img)return;
+  $('lbImg').src=c.img+(c.img.includes('?')?'&':'?')+'t='+Date.now();
+  $('lbCap').textContent=c.n+' — '+(c.src||'');
+  $('lightbox').classList.add('open');
+}
+$('lbX').onclick=()=>$('lightbox').classList.remove('open');
+$('lightbox').addEventListener('pointerdown',e=>{if(e.target===$('lightbox'))$('lightbox').classList.remove('open');});
 function renderCard(){
   if(!openMk)return;
   const B=$('cardBody');
@@ -1906,8 +1924,10 @@ function renderCard(){
       ${c.img?`<img alt="${esc(c.n)}" src="${bust}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
       <div style="display:none;font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px">camera image unavailable right now${c.link?' — try the source link below':''}</div>`:`
       <a href="${c.link}" target="_blank" rel="noopener" style="display:block;text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:14px;margin-top:10px">open live view ↗</a>`}
-      <div class="foot"><span>${c.img?'live still':'external live view'}</span><span>${c.link?`<a href="${c.link}" target="_blank" rel="noopener" style="color:var(--dim);margin-right:10px">source ↗</a>`:''}${c.img?'<button id="camRefresh">refresh</button>':''}</span></div>`;
+      <div class="foot"><span>${c.img?'live still':'external live view'}</span><span>${c.link?`<a href="${c.link}" target="_blank" rel="noopener" style="color:var(--dim);margin-right:10px">source ↗</a>`:''}${c.img?'<button id="camBig">enlarge ⤢</button><button id="camRefresh">refresh</button>':''}</span></div>`;
     const btn=B.querySelector('#camRefresh'); if(btn)btn.onclick=()=>renderCard();
+    const big=B.querySelector('#camBig'); if(big)big.onclick=()=>openLightbox(c);
+    const im=B.querySelector('img'); if(im){im.style.cursor='zoom-in'; im.onclick=()=>openLightbox(c);}
   }
 }
 
@@ -2019,7 +2039,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='-')zoomAt(innerWidth/2,innerHeight/2,zoom/1.3);
   else if(e.key==='0'||e.key.toLowerCase()==='r')resetView();
   else if(e.key.toLowerCase()==='f')$('fsBtn').click();
-  else if(e.key==='Escape'){closeCard();$('info').classList.remove('open');}
+  else if(e.key==='Escape'){$('lightbox').classList.remove('open');closeCard();$('info').classList.remove('open');}
 });
 
 /* ---------------- veil / toast ---------------- */
