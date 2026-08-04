@@ -38,6 +38,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .mk.v0 svg{color:var(--v0)} .mk.v1 svg{color:var(--v1)} .mk.v2 svg{color:var(--v2)}
 .mk.v3 svg{color:var(--v3)} .mk.vna svg{color:var(--vna)}
 .mk.fire svg{filter:drop-shadow(0 0 4px rgba(255,92,57,.65)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+.mk{touch-action:none}
+.mk.sel{z-index:6}
+.mk.sel i{box-shadow:0 0 0 3px var(--accent),0 0 12px rgba(232,84,47,.8)}
+.mk.sel svg{transform:scale(1.35);filter:drop-shadow(0 0 7px var(--accent)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+.mk.sel b{border-color:var(--accent);color:#fff}
 
 /* ---- header ---- */
 header{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;align-items:flex-start;
@@ -148,6 +153,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
 #infoCard .keys{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9}
 #infoClose{position:sticky;float:right;top:0;font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
 @media (max-width:560px){#frameTime{font-size:15px} #dock{left:8px;right:8px}}
+@media (min-width:900px){#card{width:min(680px,80vw)} #card img{max-height:60vh;object-fit:contain;background:#05080b}}
 </style>
 </head>
 <body>
@@ -265,7 +271,7 @@ const IMG_REFRESH=5*60*1000, WX_REFRESH=10*60*1000;
 const HIRES_MIN_ZOOM=1.25;
 
 const $=id=>document.getElementById(id);
-const cv=$('cv'), ctx=cv.getContext('2d');
+const cv=$('cv'), ctx=cv.getContext('2d'), stage=$('stage');
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------------- state ---------------- */
@@ -1387,18 +1393,20 @@ ruler.addEventListener('pointermove',e=>{if(ruler.hasPointerCapture(e.pointerId)
 ruler.addEventListener('pointerup',()=>{if(scrubResume){holdUntil=performance.now()+700;setPlaying(true);}else scheduleHires();});
 
 /* ---------------- gestures ---------------- */
-const pts=new Map(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false;
-cv.addEventListener('pointerdown',e=>{
-  cv.setPointerCapture(e.pointerId);
+const pts=new Map(); let pinch=null,lastTap={t:0,x:0,y:0},moved=false,tapMk=false;
+stage.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#dock,header,#card,#resetView,#info'))return;
+  tapMk=!!(e.target.closest&&e.target.closest('.mk'));
+  stage.setPointerCapture(e.pointerId);
   pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
   if(pts.size===2){const [a,b]=[...pts.values()];
     pinch={d:Math.hypot(a.x-b.x,a.y-b.y),zoom,mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}};}
 });
-cv.addEventListener('pointermove',e=>{
+stage.addEventListener('pointermove',e=>{
   if(!pts.has(e.pointerId))return;
   const p=pts.get(e.pointerId);
   const dx=e.clientX-p.x, dy=e.clientY-p.y;
-  if(Math.hypot(dx,dy)>8)moved=true;
+  if(Math.hypot(dx,dy)>8){moved=true;document.body.classList.add('zen');}
   p.x=e.clientX; p.y=e.clientY;
   if(pts.size===2&&pinch){
     const [a,b]=[...pts.values()];
@@ -1421,13 +1429,14 @@ function endPointer(e){
       lastTap.t=0; zoom>homeZ*1.35?goHome():zoomAt(e.clientX,e.clientY,Math.min(18,homeZ*2.6));
     }else{
       lastTap={t:now,x:e.clientX,y:e.clientY};
-      setTimeout(()=>{if(lastTap.t&&performance.now()-lastTap.t>=350){closeCard();toggleZen();lastTap.t=0;}},360);
+      const wasMk=tapMk;
+      setTimeout(()=>{if(lastTap.t&&performance.now()-lastTap.t>=350){if(!wasMk){closeCard();toggleZen();}lastTap.t=0;}},360);
     }
   }
 }
-cv.addEventListener('pointerup',endPointer);
-cv.addEventListener('pointercancel',endPointer);
-cv.addEventListener('wheel',e=>{e.preventDefault();
+stage.addEventListener('pointerup',endPointer);
+stage.addEventListener('pointercancel',endPointer);
+stage.addEventListener('wheel',e=>{if(e.target.closest('#dock,header,#card,#info'))return;e.preventDefault();
   zoomAt(e.clientX,e.clientY,zoom*Math.exp(-e.deltaY*0.0016));},{passive:false});
 
 /* ---------------- markers & layers ---------------- */
@@ -1453,8 +1462,7 @@ function buildAirportMarkers(){
     el.className='mk apt vna';
     el.innerHTML='<i></i><b></b>';
     el.querySelector('b').textContent=a.code||a.id.slice(1);
-    el.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.addEventListener('click',()=>openCard('apt',a));
+    el.addEventListener('click',()=>{if(moved)return;openCard('apt',a);});
     lyr.appendChild(el);
     mkIndex.push({el,u,v,type:'apt',ref:a});
     a._mk=el;
@@ -1467,8 +1475,7 @@ function addCamMarkers(list){
     el.className='mk cam vna';
     el.innerHTML=(c.az!=null)?wedgeSvg(c.az,c.fov):camSvg;
     el.title=c.n;
-    el.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.addEventListener('click',()=>openCard('cam',c));
+    el.addEventListener('click',()=>{if(moved)return;openCard('cam',c);});
     lyr.appendChild(el);
     mkIndex.push({el,u,v,type:'cam',ref:c});
     c._mk=el;
@@ -1491,7 +1498,7 @@ function restyleMarkers(){
       const o=obs[a.id]; if(o&&o.ok)vis=o.vis;
     }
     const cls=visClass(vis);
-    if(a._mk){a._mk.className='mk apt '+cls;
+    if(a._mk){a._mk.className='mk apt '+cls+(openMk&&openMk.ref===a?' sel':'');
       a._mk.querySelector('b').textContent=((a.code||a.id.slice(1))+' '+(vis!=null?visLabel(vis)+'sm':'')+extra).trim();}
   }
   for(const c of cams){
@@ -1500,7 +1507,7 @@ function restyleMarkers(){
       if(useTaf){const f=tafAt(c.apt.id,olT); vis=f?f.vis:null;}
       else{const o=obs[c.apt.id]; vis=o&&o.ok?o.vis:null;}
     }
-    if(c._mk)c._mk.className='mk cam '+visClass(vis);
+    if(c._mk)c._mk.className='mk cam '+visClass(vis)+(openMk&&openMk.ref===c?' sel':'');
   }
 }
 function updateMarkers(v){
@@ -1612,8 +1619,7 @@ function rebuildFireMarkers(list){
     el.className='mk fire'; el.innerHTML=fireSvg; el.title=f.n;
     el.querySelector('svg').style.width=big+'px'; el.querySelector('svg').style.height=big+'px';
     el.querySelector('svg').style.color=(f.pct!=null&&f.pct>=80)?'#ffa32e':'#ff5c39';
-    el.addEventListener('pointerdown',e=>e.stopPropagation());
-    el.addEventListener('click',()=>openCard('fire',f));
+    el.addEventListener('click',()=>{if(moved)return;openCard('fire',f);});
     lyr.appendChild(el);
     mkIndex.push({el,u,v,type:'fire',ref:f});
     f._mk=el;
@@ -1762,8 +1768,16 @@ async function refreshObs(){
 /* ---------------- detail card ---------------- */
 const compass=d=>d==null?'':['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(d/22.5)%16];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function openCard(type,ref){openMk={type,ref};renderCard();$('card').classList.add('open');wake();}
-function closeCard(){openMk=null;$('card').classList.remove('open');}
+function openCard(type,ref){
+  if(openMk&&openMk.ref&&openMk.ref._mk)openMk.ref._mk.classList.remove('sel');
+  openMk={type,ref}; renderCard();
+  if(ref._mk)ref._mk.classList.add('sel');
+  $('card').classList.add('open');
+}
+function closeCard(){
+  if(openMk&&openMk.ref&&openMk.ref._mk)openMk.ref._mk.classList.remove('sel');
+  openMk=null; $('card').classList.remove('open');
+}
 $('cardX').onclick=closeCard;
 function renderCard(){
   if(!openMk)return;
@@ -1843,7 +1857,7 @@ function renderCard(){
 function wake(){document.body.classList.remove('zen');}
 function toggleZen(){document.body.classList.toggle('zen');}
 ['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,e=>{
-  if(e.target===cv)return; wake();}));
+  if(e.target===cv||(e.target.closest&&e.target.closest('#lyr')))return; wake();}));
 
 $('playBtn').onclick=()=>setPlaying(!playing);
 $('resetView').onclick=resetView;
