@@ -147,7 +147,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
 #infoCard a{color:var(--ink)}
 #infoCard .keys{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.9}
 #infoClose{position:sticky;float:right;top:0;font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
-@media (max-width:560px){header .brand small{display:none} #frameTime{font-size:15px} #dock{left:8px;right:8px}}
+@media (max-width:560px){#frameTime{font-size:15px} #dock{left:8px;right:8px}}
 </style>
 </head>
 <body>
@@ -157,7 +157,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
 
   <header id="hdr">
     <div class="brand"><span id="brandA">fog</span><span class="slash">/</span>west
-      <small>CA · OR · WA — marine layer &amp; tule fog, live</small></div>
+      </div>
     <div id="status">
       <div id="liveChip"><span class="dot"></span><span id="liveTxt">CONNECTING</span></div>
       <div id="frameTime">—</div>
@@ -214,7 +214,7 @@ body.zen header,body.zen #dock,body.zen #resetView{opacity:0;pointer-events:none
   <div id="veil">
     <div class="fogblob a"></div><div class="fogblob b"></div>
     <div class="inner">
-      <div class="brand"><span id="brandA">fog</span><span class="slash">/</span>west<small>CA · OR · WA — marine layer &amp; tule fog, live</small></div>
+      <div class="brand"><span id="brandA">fog</span><span class="slash">/</span>west</div>
       <div id="loadMsg">contacting GOES-West…</div>
       <div id="bar"><i></i></div>
       <div id="errBox"><p id="errTxt"></p><button id="retryBtn">RETRY</button></div>
@@ -388,6 +388,291 @@ const AIRPORTS=[
 ];
 
 /* ---------------- data: webcams ---------------- */
+
+const COAST=[[48.39,-124.72],[47.9,-124.63],[47.0,-124.17],[46.26,-124.06],[45.9,-123.97],[45.0,-123.97],
+ [44.3,-124.10],[43.35,-124.34],[42.4,-124.42],[41.75,-124.20],[40.8,-124.18],[40.44,-124.41],[39.4,-123.82],
+ [38.95,-123.74],[38.31,-123.05],[37.78,-122.51],[37.1,-122.29],[36.6,-121.90],[36.28,-121.86],[35.63,-121.19],
+ [35.15,-120.65],[34.45,-120.47],[34.03,-118.80],[33.74,-118.29],[33.38,-117.59],[32.66,-117.24]];
+function coastDistKm(lat,lon){
+  const kx=111.32*Math.cos(lat*Math.PI/180), ky=110.57;
+  let best=1e9;
+  for(let i=0;i<COAST.length-1;i++){
+    const [a1,o1]=COAST[i],[a2,o2]=COAST[i+1];
+    const px=(lon-o1)*kx, py=(lat-a1)*ky, vx=(o2-o1)*kx, vy=(a2-a1)*ky;
+    const L2=vx*vx+vy*vy||1e-9;
+    const t=Math.max(0,Math.min(1,(px*vx+py*vy)/L2));
+    best=Math.min(best,Math.hypot(px-t*vx,py-t*vy));
+  }
+  return best;
+}
+/* ---------------- tiled imagery engine (CIRA SLIDER) ---------------- */
+const SLIDER_HOSTS=['https://rammb-slider.cira.colostate.edu','https://slider.cira.colostate.edu'];
+let sliderHost=SLIDER_HOSTS[0];
+const TPROD={geo:'geocolor',ir:'band_07',fire:'fire_temperature'};
+let engine='tiles';                      // 'tiles' | 'star' fallback
+let TILE={size:625,maxZ:4,ready:false};
+const tileCache=new Map();
+let tileQueue=[], tileActive=0;
+let tTimes=[], tTimesDeep=[], timesMode='json', scanSS=null;
+function sliderSat(){return PROJ.sat==='GOES18'?'goes-18':'goes-19';}
+function tprod(){return TPROD[mode]||'geocolor';}
+function stampDate(st){return st.slice(0,4)+'/'+st.slice(4,6)+'/'+st.slice(6,8);}
+function tileUrl(st,z,r,c){
+  return `${sliderHost}/data/imagery/${stampDate(st)}/${sliderSat()}---conus/${tprod()}/${st}/`+
+    `${String(z).padStart(2,'0')}/${String(r).padStart(3,'0')}_${String(c).padStart(3,'0')}.png`;
+}
+function tsToMs2(x){const s=String(x);
+  return Date.UTC(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12),+s.slice(12,14));}
+function stampFor(ms,ss){const d=new Date(ms);const p=(n,w)=>String(n).padStart(w,'0');
+  return ''+d.getUTCFullYear()+p(d.getUTCMonth()+1,2)+p(d.getUTCDate(),2)+p(d.getUTCHours(),2)+p(d.getUTCMinutes(),2)+p(ss,2);}
+function recentScanMinute(k){
+  let t=Date.now()-6*60000; t-=t%60000;
+  while((Math.floor(t/60000)%5)!==1)t-=60000;
+  return t-k*5*60000;
+}
+function ssCacheKey(){return 'fw_ss_'+sliderSat();}
+function discoverSecondsAt(baseMs){
+  return new Promise(res=>{
+    let done=false,pending=60;
+    for(let ss=0;ss<60;ss++){
+      const im=new Image();
+      im.onload=()=>{if(!done){done=true;res(ss);}};
+      im.onerror=()=>{if(--pending===0&&!done)res(null);};
+      im.src=tileUrl(stampFor(baseMs,ss),0,0,0);
+    }
+    setTimeout(()=>{if(!done)res(null);},9000);
+  });
+}
+async function discoverSeconds(){
+  if(scanSS!=null)return scanSS;
+  try{const c=JSON.parse(localStorage.getItem(ssCacheKey())||'null');
+    if(c&&Date.now()-c.at<36*3600000){scanSS=c.ss;return scanSS;}}catch(e){}
+  for(let k=0;k<3;k++){
+    const found=await discoverSecondsAt(recentScanMinute(k));
+    if(found!=null){
+      scanSS=found;
+      try{localStorage.setItem(ssCacheKey(),JSON.stringify({ss:found,at:Date.now()}));}catch(e){}
+      return found;
+    }
+  }
+  throw 0;
+}
+function synthTileTimes(deep){
+  const ss=scanSS==null?0:scanSS;
+  const n=deep?14*288:(8*12+10);
+  const out=[];
+  let t=recentScanMinute(0);
+  for(let i=0;i<n;i++,t-=5*60000)out.push({stamp:stampFor(t,ss),t});
+  out.reverse();
+  if(deep)tTimesDeep=out; else tTimes=out;
+  return out;
+}
+async function tileTimesJson(deep){
+  const f=deep?'latest_times_5760.json':'latest_times.json';
+  let lastErr=0;
+  for(const host of SLIDER_HOSTS){
+    try{
+      const ctl2=new AbortController();
+      const to2=setTimeout(()=>ctl2.abort(),8000);
+      const r=await fetch(`${host}/data/json/${sliderSat()}/conus/${tprod()}/${f}`,{cache:'no-store',signal:ctl2.signal});
+      clearTimeout(to2);
+      if(!r.ok){lastErr=r.status;continue;}
+      const j=await r.json();
+      const out=((j&&j.timestamps_int)||[]).map(x=>({stamp:String(x),t:tsToMs2(x)})).sort((a,b)=>a.t-b.t);
+      if(!out.length)continue;
+      sliderHost=host; timesMode='json';
+      if(scanSS==null)scanSS=+out[out.length-1].stamp.slice(12,14);
+      if(deep)tTimesDeep=out; else tTimes=out;
+      return out;
+    }catch(e){}
+  }
+  throw lastErr||0;
+}
+async function tileTimes(deep){
+  try{ return await tileTimesJson(deep); }
+  catch(e){
+    if(deep){
+      try{
+        const std=await tileTimesJson(false);   // real stamps, shallower archive
+        tTimesDeep=std;
+        return std;
+      }catch(e2){}
+    }
+    await discoverSeconds();      // CORS-free path: probe the scan clock
+    timesMode='synth';
+    return synthTileTimes(deep);
+  }
+}
+function tileProbe(st,z){return new Promise(res=>{const im=new Image();
+  im.onload=()=>res(im); im.onerror=()=>res(null); im.src=tileUrl(st,z,0,0);});}
+async function calibrateTiles(){
+  if(TILE.ready)return;
+  const times=await tileTimes(false);
+  if(times.length<2)throw 0;
+  const st=times[times.length-2].stamp;
+  const t0=await tileProbe(st,0);
+  if(!t0)throw 0;
+  TILE.size=t0.naturalWidth||625;
+  for(const z of [5,4,3,2]){ if(await tileProbe(st,z)){TILE.maxZ=z;break;} }
+  TILE.ready=true;
+}
+function spanCount(v,z){const sp=tileSpan(v,z);
+  return Math.max(0,sp.c1-sp.c0+1)*Math.max(0,sp.r1-sp.r0+1);}
+function pickZ(v){
+  const need=v.s*Math.min(devicePixelRatio||1,2.2)*0.55;
+  let z=Math.ceil(Math.log2(Math.max(1e-6,need*BASE_W/TILE.size)));
+  z=Math.max(0,Math.min(TILE.maxZ,z));
+  if(playing&&frames.length>1){
+    while(z>0&&spanCount(v,z)*frames.length>300)z--;   // whole loop must fit in cache
+  }
+  return z;
+}
+function tileSpan(v,z){
+  // SLIDER centers the 5000x3000 CONUS image in its square pyramid (CropAnchor Center):
+  // 20% padding above and below -> pyramidY = imageWorldY + PADY
+  const wt=BASE_W/Math.pow(2,z), PADY=(BASE_W-BASE_H)/2;
+  const bx0=CROP.x+(0-v.tx)/v.s, by0=CROP.y+(0-v.ty)/v.s;
+  const bx1=CROP.x+(v.W-v.tx)/v.s, by1=CROP.y+(v.H-v.ty)/v.s;
+  const n=Math.pow(2,z);
+  return {wt,PADY,
+    c0:Math.max(0,Math.floor(bx0/wt)), c1:Math.min(n-1,Math.floor(bx1/wt)),
+    r0:Math.max(Math.max(0,Math.floor(PADY/wt)),Math.floor((by0+PADY)/wt)),
+    r1:Math.min(Math.min(n-1,Math.floor((PADY+BASE_H-0.001)/wt)),Math.floor((by1+PADY)/wt))};
+}
+function tKey(st,z,r,c){return st+'/'+z+'/'+r+'_'+c;}
+function reqTile(st,z,r,c,pri){
+  const key=tKey(st,z,r,c);
+  const e=tileCache.get(key);
+  if(e){
+    if(e.ok||e.pending)return;
+    if(e.err&&Date.now()-(e.at||0)<45000)return;   // retry failed tiles after 45 s
+    tileCache.delete(key);
+  }
+  tileCache.set(key,{ok:false,pending:true});
+  tileQueue.push({key,url:tileUrl(st,z,r,c),st,pri:pri||0});
+  pumpTiles();
+}
+function pumpTiles(){
+  tileQueue.sort((a,b)=>a.pri-b.pri);
+  while(tileActive<6&&tileQueue.length){
+    const q=tileQueue.shift(); tileActive++;
+    const im=new Image(); im.decoding='async';
+    im.onload=()=>{tileActive--;
+      const e=tileCache.get(q.key); if(e){e.img=im;e.ok=true;e.pending=false;}
+      if(q.key===sentinelKey(q.st))promoteTail(q.st);
+      trimTileCache();
+      if(frames[idx]&&(frames[idx].stamp===q.st||tmode==='outlook'))scheduleDraw();
+      pumpTiles();};
+    im.onerror=()=>{tileActive--;const e=tileCache.get(q.key);if(e){e.err=true;e.pending=false;e.at=Date.now();}pumpTiles();};
+    im.src=q.url;
+  }
+}
+function trimTileCache(){
+  if(tileCache.size<=700)return;
+  const live=new Set(frames.map(f=>f.stamp));
+  for(const k of tileCache.keys()){
+    if(tileCache.size<=560)break;
+    if(live.has(k.slice(0,14)))continue;
+    tileCache.delete(k);
+  }
+  for(const k of tileCache.keys()){
+    if(tileCache.size<=560)break;
+    tileCache.delete(k);
+  }
+}
+function drawTileAt(e,r,c,wt,PADY,v){
+  const wy0=r*wt-PADY, wy1=wy0+wt;
+  const cy0=Math.max(0,wy0), cy1=Math.min(BASE_H,wy1);
+  if(cy1<=cy0)return;
+  const T=e.img.naturalHeight;
+  const sy=(cy0-wy0)/wt*T, sh=(cy1-cy0)/wt*T;
+  const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((cy0)-CROP.y)*v.s;
+  ctx.drawImage(e.img,0,sy,e.img.naturalWidth,sh, x,y,wt*v.s,(cy1-cy0)*v.s);
+}
+function drawParent(st,z,r,c,wt,PADY,v){
+  const wy0=r*wt-PADY, wy1=wy0+wt;
+  const cy0=Math.max(0,wy0), cy1=Math.min(BASE_H,wy1);
+  if(cy1<=cy0)return true;
+  for(let pz=z-1;pz>=Math.max(0,z-3);pz--){
+    const f=Math.pow(2,z-pz), pr=Math.floor(r/f), pc=Math.floor(c/f);
+    const e=tileCache.get(tKey(st,pz,pr,pc));
+    if(e&&e.ok){
+      const T=e.img.naturalWidth;
+      const sx=(c-pc*f)*T/f;
+      const syBase=(r-pr*f)*T/f;
+      const sy=syBase+(cy0-wy0)/wt*(T/f);
+      const sh=(cy1-cy0)/wt*(T/f);
+      const x=v.tx+((c*wt)-CROP.x)*v.s, y=v.ty+((cy0)-CROP.y)*v.s;
+      ctx.drawImage(e.img,sx,sy,T/f,sh, x,y,wt*v.s,(cy1-cy0)*v.s);
+      return true;
+    }
+  }
+  return false;
+}
+function drawTiles(f,v){
+  const z=pickZ(v), sp=tileSpan(v,z);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  let drew=false;
+  for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++){
+    const e=tileCache.get(tKey(f.stamp,z,r,c));
+    if(e&&e.ok){drawTileAt(e,r,c,sp.wt,sp.PADY,v);drew=true;}
+    else{ if(drawParent(f.stamp,z,r,c,sp.wt,sp.PADY,v))drew=true; reqTile(f.stamp,z,r,c,0); }
+  }
+  if(z>1){const zp=Math.max(0,z-2),spp=tileSpan(v,zp);   // keep coarse parents warm
+    for(let r=spp.r0;r<=spp.r1;r++)for(let c=spp.c0;c<=spp.c1;c++)reqTile(f.stamp,zp,r,c,2);}
+  return drew;
+}
+function prefetchAhead(v){
+  if(!frames.length)return;
+  const z=pickZ(v), sp=tileSpan(v,z);
+  for(let k=1;k<frames.length;k++){
+    const f=frames[(idx+k)%frames.length];
+    for(let r=sp.r0;r<=sp.r1;r++)for(let c=sp.c0;c<=sp.c1;c++)reqTile(f.stamp,z,r,c,k+2);
+  }
+}
+function resetTiles(){tileCache.clear();tileQueue.length=0;tailPending=[];lastGoodStamp=null;}
+let tailPending=[], lastGoodStamp=null;
+function sentinelKey(st){return st+'/0/0_0';}
+function gateTail(list){
+  const ready=[];
+  for(let i=0;i<list.length;i++){
+    const f=list[i];
+    if(i>=list.length-2){
+      const e=tileCache.get(sentinelKey(f.stamp));
+      if(!(e&&e.ok)){
+        if(!tailPending.some(x=>x.stamp===f.stamp))tailPending.push(f);
+        reqTile(f.stamp,0,0,0,0);
+        continue;
+      }
+    }
+    ready.push(f);
+  }
+  return ready.length>=2?ready:list;
+}
+function promoteTail(st){
+  if(tmode!=='live')return;
+  const i=tailPending.findIndex(f=>f.stamp===st);
+  if(i<0)return;
+  const f=tailPending.splice(i,1)[0];
+  if(frames.some(x=>x.stamp===f.stamp))return;
+  const wasLast=idx===frames.length-1;
+  frames.push(f); frames.sort((a,b)=>a.t-b.t);
+  const cutoff=frames[frames.length-1].t-hours*3600000;
+  while(frames.length>maxFrames()+6||(frames.length&&frames[0].t<cutoff)){frames.shift();idx=Math.max(0,idx-1);}
+  if(wasLast)idx=frames.length-1;
+  for(let r=0;r<2;r++)for(let c=0;c<2;c++)reqTile(f.stamp,1,r,c,5);
+  buildRuler(); syncHUD();
+}
+function warmLoopBase(){
+  if(engine!=='tiles')return;
+  for(const f of frames)
+    for(let r=0;r<2;r++)for(let c=0;c<2;c++)reqTile(f.stamp,1,r,c,6);
+}
+let drawQueued=false;
+function scheduleDraw(){
+  if(drawQueued)return; drawQueued=true;
+  requestAnimationFrame(()=>{drawQueued=false;draw();});
+}
 
 /* ---------------- imagery pipeline ---------------- */
 const PT='America/Los_Angeles';
@@ -1647,9 +1932,21 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---------------- veil / toast ---------------- */
+let veilGuard=null, veilForced=false;
 function showVeil(msg){const v=$('veil');v.classList.remove('gone');v.classList.remove('peek');
-  $('errBox').style.display='none';$('bar').style.display='block';setMsg(msg);setProg(0,1);}
-function hideVeil(){const v=$('veil');v.classList.add('gone');v.classList.remove('peek');}
+  $('errBox').style.display='none';$('bar').style.display='block';setMsg(msg);setProg(0,1);
+  clearTimeout(veilGuard);
+  veilGuard=setTimeout(()=>{
+    if($('veil').classList.contains('gone')||frames.length>1)return;
+    if(engine==='tiles'&&!veilForced){
+      veilForced=true; engine='star'; syncEngineUI();
+      toast('tile service not responding \u2014 legacy imagery mode');
+      reloadStar(true,++loadRun);
+    }else{
+      showError("Couldn't reach the satellite imagery services. This is usually a network hiccup \u2014 retry in a moment.");
+    }
+  },20000);}
+function hideVeil(){clearTimeout(veilGuard);const v=$('veil');v.classList.add('gone');v.classList.remove('peek');}
 function setMsg(m){$('loadMsg').textContent=m;}
 function setProg(d,n){$('bar').firstElementChild.style.width=(d/n*100)+'%';
   if(n>1)setMsg(`pulling frames from GOES-West · ${d} / ${n}`);}
