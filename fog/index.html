@@ -8,8 +8,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌫️</text></svg>">
 <style>
 :root{
-  --bg:#0a0e13; --ink:#e9edf1; --dim:#8b98a5; --line:rgba(233,237,241,.14);
-  --accent:#e8542f;
+  --bg:#0a0e13; --ink:#e9edf1; --dim:#8B959E; --line:rgba(233,237,241,.14);
+  --accent:#A31F34;
   --v0:#ff5c39; --v1:#ffa32e; --v2:#e8d34f; --v3:#39d0a4; --vna:#5a6672;
   --vfr:#39d07f; --mvfr:#3aa8ff; --ifr:#ff4d4d; --lifr:#d95ce8;
   --glass:rgba(10,14,19,.58);
@@ -45,7 +45,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .mk.fire svg{filter:drop-shadow(0 0 4px rgba(255,92,57,.65)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
 .mk{touch-action:none}
 .mk.sel{z-index:6}
-.mk.sel i{box-shadow:0 0 0 3px var(--accent),0 0 12px rgba(232,84,47,.8)}
+.mk.sel i{box-shadow:0 0 0 3px var(--accent),0 0 12px rgba(163,31,52,.8)}
 .mk.sel svg{transform:scale(1.35);filter:drop-shadow(0 0 7px var(--accent)) drop-shadow(0 1px 2px rgba(0,0,0,.8))}
 .mk.sel b{border-color:var(--accent);color:#fff}
 
@@ -77,9 +77,9 @@ header .brand,#status{pointer-events:auto}
 #playBtn svg{width:15px;height:15px;fill:var(--ink)} #playBtn:active{transform:scale(.94)}
 #ruler{position:relative;flex:1;height:44px;cursor:pointer;touch-action:none}
 #ruler .track{position:absolute;left:0;right:0;top:19px;height:5px;border-radius:3px;background:rgba(233,237,241,.14)}
-#ruler .fill{position:absolute;left:0;top:19px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgba(232,84,47,.45),var(--accent));width:0}
+#ruler .fill{position:absolute;left:0;top:19px;height:5px;border-radius:3px;background:linear-gradient(90deg,rgba(163,31,52,.45),var(--accent));width:0}
 #ruler .thumb{position:absolute;top:21.5px;width:15px;height:15px;border-radius:50%;background:var(--accent);
-  border:2.5px solid #0a0e13;box-shadow:0 0 0 1px rgba(232,84,47,.55),0 2px 8px rgba(0,0,0,.5);transform:translate(-50%,-50%)}
+  border:2.5px solid #0a0e13;box-shadow:0 0 0 1px rgba(163,31,52,.55),0 2px 8px rgba(0,0,0,.5);transform:translate(-50%,-50%)}
 #ruler .tick{position:absolute;top:26px;width:1px;height:5px;background:rgba(233,237,241,.28);transform:translateX(-.5px)}
 #ruler .tick.major{height:8px;background:rgba(233,237,241,.45)}
 #ruler .lab{position:absolute;top:34px;transform:translateX(-50%);font-family:var(--mono);font-size:9.5px;color:var(--dim);white-space:nowrap}
