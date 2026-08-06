@@ -53,9 +53,9 @@ footer a{color:var(--dim)}
 <script>
 const GKEY='AIzaSyCQDaDSFow1CyayUbY5bbAhTeDEc8wKG-g';
 const APTS=[
- {id:'WVI',n:'Watsonville',lat:36.9357,lon:-121.7896},
- {id:'SNS',n:'Salinas',lat:36.6628,lon:-121.6064},
- {id:'OAR',n:'Marina',lat:36.6819,lon:-121.7621},
+ {id:'WVI',n:'Watsonville',lat:36.9357,lon:-121.7896,q:'Watsonville Municipal Airport, Watsonville, CA'},
+ {id:'SNS',n:'Salinas',lat:36.6628,lon:-121.6064,q:'Salinas Municipal Airport, Salinas, CA'},
+ {id:'OAR',n:'Marina',lat:36.6819,lon:-121.7621,q:'Marina Municipal Airport, Marina, CA'},
 ];
 const $=id=>document.getElementById(id);
 const R=6371e3;
@@ -64,8 +64,8 @@ function hav(a,b,c,d){const p=Math.PI/180,dl=(c-a)*p,dg=(d-b)*p,
   return 2*R*Math.asin(Math.sqrt(h));}
 function fmtMin(s){const m=Math.round(s/60);
   return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0');}
-function gmap(a,me){const d=`${a.lat},${a.lon}`;
-  return 'https://www.google.com/maps/dir/?api=1&destination='+d+'&travelmode=driving'+
+function gmap(a,me){
+  return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(a.q)+'&travelmode=driving'+
     (me?('&origin='+me.lat+','+me.lon):'');}
 function render(me,rows){
   $('cards').innerHTML='';
