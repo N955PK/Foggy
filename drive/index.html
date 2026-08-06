@@ -15,7 +15,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100svh;display:flex;flex-direction:column;align-items:center}
 main{width:100%;max-width:620px;padding:0 20px calc(40px + env(safe-area-inset-bottom))}
-header{padding:calc(30px + env(safe-area-inset-top)) 0 6px;display:flex;align-items:baseline;gap:10px}
+header{padding:calc(30px + env(safe-area-inset-top)) 0 18px;display:flex;align-items:center;gap:16px}
 h1{font-family:var(--mono);font-weight:600;font-size:20px;letter-spacing:.05em}
 h1 .slash{color:var(--accent);font-weight:700}
 h1 a{color:var(--ink);text-decoration:none}
@@ -41,9 +41,10 @@ footer a{color:var(--dim)}
 </head>
 <body>
 <main>
-  <header><h1><a href="/">live free <span class="slash">/</span> fly</a></h1>
-    <span style="font-family:var(--mono);font-size:13px;color:var(--dim)">drive<span style="color:var(--accent)">/</span>time</span></header>
-  <p class="sub">Drive time from where you are to the home fields. Tap a card for turn-by-turn in Google Maps with live traffic.</p>
+  <header>
+    <a href="/" aria-label="live free and fly — home"><img src="/assets/logo-512.v4.png" alt="" style="height:48px;width:auto;display:block"></a>
+    <h1>drive<span class="slash">/</span>time</h1>
+  </header>
   <div id="status">locating…</div>
   <div id="cards"></div>
   <button id="retry">try again</button>
@@ -79,7 +80,7 @@ function render(me,rows){
     const mi=a.r?(a.r.meters/1609.344).toFixed(0):(a.dline!=null?(a.dline/1609.344).toFixed(0):null);
     el.innerHTML=`<div class="top"><span class="id">${a.id}</span><span class="nm">${a.n}</span>
       <span class="go">GOOGLE MAPS ↗</span></div>
-      <div class="big">${a.r?fmtMin(a.r.sec)+`<small>${mi} mi${a.r.traffic?' · in current traffic':' by road'}</small>`
+      <div class="big">${a.r?`<span style="color:${a.r.col||'inherit'}">${fmtMin(a.r.sec)}</span><small>${mi} mi${a.r.traffic?' · in current traffic':' by road'}</small>`
         :(mi!=null?mi+' mi direct — routing…':'awaiting location')}</div>`;
     $('cards').appendChild(el);
   }
@@ -107,9 +108,12 @@ async function routeGoogle(me){
   },(r,st)=>st==='OK'?res(r):rej(st)));
   const row=resp.rows[0]&&resp.rows[0].elements;
   if(!row||row.some(e=>e.status!=='OK'))throw 'row';
-  return row.map(e=>({sec:(e.duration_in_traffic||e.duration).value,
-                      meters:e.distance.value,
-                      traffic:!!e.duration_in_traffic}));
+  return row.map(e=>{
+    const sec=(e.duration_in_traffic||e.duration).value, base=e.duration.value;
+    const ratio=base?sec/base:1;
+    const col=!e.duration_in_traffic?null:ratio<=1.1?'#39d07f':ratio<=1.35?'#ffa32e':'#ff4d4d';
+    return {sec,meters:e.distance.value,traffic:!!e.duration_in_traffic,col};
+  });
 }
 async function routeOSRM(me){
   const coords=[`${me.lon},${me.lat}`,...APTS.map(a=>`${a.lon},${a.lat}`)].join(';');
