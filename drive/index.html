@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e13">
+<title>drive/time — live free and fly</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.v4.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.v4.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.v4.png">
+<style>
+:root{--bg:#0a0e13;--ink:#e9edf1;--dim:#8B959E;--line:rgba(233,237,241,.14);--accent:#A31F34;--glass:rgba(16,22,29,.6);
+--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+--sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100svh;display:flex;flex-direction:column;align-items:center}
+main{width:100%;max-width:620px;padding:0 20px calc(40px + env(safe-area-inset-bottom))}
+header{padding:calc(30px + env(safe-area-inset-top)) 0 6px;display:flex;align-items:baseline;gap:10px}
+h1{font-family:var(--mono);font-weight:600;font-size:20px;letter-spacing:.05em}
+h1 .slash{color:var(--accent);font-weight:700}
+h1 a{color:var(--ink);text-decoration:none}
+.sub{color:var(--dim);font-size:13px;margin:6px 0 26px;line-height:1.5}
+#status{font-family:var(--mono);font-size:11.5px;color:var(--dim);letter-spacing:.04em;margin-bottom:16px;min-height:16px}
+#status b{color:var(--ink)}
+.apt{display:block;border:1px solid var(--line);border-radius:16px;background:var(--glass);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:18px;margin-bottom:12px;
+  text-decoration:none;color:var(--ink);transition:border-color .2s}
+.apt:hover{border-color:rgba(163,31,52,.55)}
+.top{display:flex;align-items:baseline;gap:10px}
+.id{font-family:var(--mono);font-weight:700;font-size:17px;letter-spacing:.06em}
+.nm{color:var(--dim);font-size:13px}
+.go{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.06em;white-space:nowrap}
+.big{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:10px;letter-spacing:.02em}
+.big small{font-size:12px;color:var(--dim);font-weight:400;margin-left:8px}
+.wait .big{color:var(--dim);font-size:15px;font-weight:400}
+button#retry{display:none;margin:8px auto 0;font-family:var(--mono);font-size:11px;color:var(--ink);
+  background:none;border:1px solid var(--line);border-radius:999px;padding:8px 18px}
+footer{margin-top:26px;color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.04em;line-height:1.9;text-align:center}
+footer a{color:var(--dim)}
+</style>
+</head>
+<body>
+<main>
+  <header><h1><a href="/">live free <span class="slash">/</span> fly</a></h1>
+    <span style="font-family:var(--mono);font-size:13px;color:var(--dim)">drive<span style="color:var(--accent)">/</span>time</span></header>
+  <p class="sub">Drive time from where you are to the home fields. Tap a card for turn-by-turn in Google Maps with live traffic.</p>
+  <div id="status">locating…</div>
+  <div id="cards"></div>
+  <button id="retry">try again</button>
+  <footer>estimates via <a href="https://project-osrm.org/" target="_blank" rel="noopener">OSRM</a> — free-flow, no traffic · Google Maps link uses live traffic<br>not for navigation planning margins</footer>
+</main>
+<script>
+const APTS=[
+ {id:'WVI',n:'Watsonville',lat:36.9357,lon:-121.7896},
+ {id:'SNS',n:'Salinas',lat:36.6628,lon:-121.6064},
+ {id:'OAR',n:'Marina',lat:36.6819,lon:-121.7621},
+];
+const $=id=>document.getElementById(id);
+const R=6371e3;
+function hav(a,b,c,d){const p=Math.PI/180,dl=(c-a)*p,dg=(d-b)*p,
+  h=Math.sin(dl/2)**2+Math.cos(a*p)*Math.cos(c*p)*Math.sin(dg/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));}
+function fmtMin(s){const m=Math.round(s/60);
+  return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0');}
+function gmap(a,me){const d=`${a.lat},${a.lon}`;
+  return 'https://www.google.com/maps/dir/?api=1&destination='+d+'&travelmode=driving'+
+    (me?('&origin='+me.lat+','+me.lon):'');}
+function render(me,times){
+  $('cards').innerHTML='';
+  const list=APTS.map((a,i)=>({...a,
+    sec:times?times[i]:null,
+    dist:me?hav(me.lat,me.lon,a.lat,a.lon):null}))
+    .sort((x,y)=>(x.sec??x.dist??9e9)-(y.sec??y.dist??9e9));
+  for(const a of list){
+    const el=document.createElement('a');
+    el.className='apt'+(a.sec==null?' wait':'');
+    el.href=gmap(a,me); el.target='_blank'; el.rel='noopener';
+    el.innerHTML=`<div class="top"><span class="id">${a.id}</span><span class="nm">${a.n}</span>
+      <span class="go">GOOGLE MAPS ↗</span></div>
+      <div class="big">${a.sec!=null?fmtMin(a.sec)+`<small>${(a.dist/1609.344).toFixed(0)} mi road-ish</small>`
+        :(a.dist!=null?(a.dist/1609.344).toFixed(0)+' mi direct — routing…':'awaiting location')}</div>`;
+    $('cards').appendChild(el);
+  }
+}
+async function route(me){
+  const coords=[`${me.lon},${me.lat}`,...APTS.map(a=>`${a.lon},${a.lat}`)].join(';');
+  const u=`https://router.project-osrm.org/table/v1/driving/${coords}?sources=0&annotations=duration`;
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),9000);
+  try{
+    const r=await fetch(u,{signal:ctl.signal});
+    clearTimeout(to);
+    const j=await r.json();
+    if(j.code!=='Ok'||!j.durations||!j.durations[0])throw 0;
+    const t=j.durations[0].slice(1);
+    render(me,t);
+    $('status').innerHTML='drive times from <b>your location</b> · free-flow estimate';
+  }catch(e){
+    $('status').textContent='routing service unreachable — straight-line distances shown; Google Maps links still work';
+  }
+}
+function locate(){
+  $('retry').style.display='none';
+  $('status').textContent='locating…';
+  render(null,null);
+  if(!navigator.geolocation){
+    $('status').textContent='no location available on this device — tap a field for directions';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(p=>{
+    const me={lat:p.coords.latitude,lon:p.coords.longitude};
+    render(me,null);
+    $('status').textContent='routing…';
+    route(me);
+  },err=>{
+    $('status').textContent=err.code===1
+      ?'location permission declined — tap a field for directions in Google Maps'
+      :'couldn\u2019t get a location fix — try again';
+    $('retry').style.display='block';
+  },{enableHighAccuracy:false,timeout:12000,maximumAge:120000});
+}
+$('retry').onclick=locate;
+render(null,null);
+locate();
+</script>
+</body>
+</html>
